@@ -1,0 +1,43 @@
+{
+  "name": "isep-live",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Site d'ISEPLive développé par Junior ISEP",
+  "main": "src/index.js",
+  "dependencies": {
+    "axios": "^0.16.2",
+    "draft-js": "^0.10.3",
+    "grid-styled": "^2.0.0-11",
+    "material-ui": "^1.0.0-beta.22",
+    "material-ui-icons": "^1.0.0-beta.17",
+    "moment": "^2.19.1",
+    "react": "^16.0.0",
+    "react-big-calendar": "^0.16.1",
+    "react-dom": "^16.0.0",
+    "react-router-dom": "^4.2.2",
+    "styled-components": "^2.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+http://git.dev.juniorisep.com/vely/IsepLive"
+  },
+  "devDependencies": {
+    "flow-bin": "^0.56.0",
+    "npm-run-all": "^4.1.1",
+    "react-scripts": "1.0.14",
+    "stylelint": "^8.2.0",
+    "stylelint-config-standard": "^17.0.0",
+    "stylelint-processor-styled-components": "^1.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "start:test": "REACT_APP_BACKEND_URL=service.isepliveback.docker-dev.juniorisep.com react-scripts start",
+    "build": "react-scripts build",
+    "build:prod": "REACT_APP_BACKEND_URL=newapi.iseplive.fr react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "check": "./check-flow-annotation.sh",
+    "eject": "react-scripts eject",
+    "lint:css": "stylelint './src/**/*.js'",
+    "flow": "flow --show-all-errors"
+  }
+}

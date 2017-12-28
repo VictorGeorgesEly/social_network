@@ -1,0 +1,3 @@
+# Sitemap: http://iseplive.fr
+
+User-agent : *

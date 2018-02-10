@@ -9,6 +9,9 @@ import Tabs, { Tab } from 'material-ui/Tabs';
 import MUIButton from 'material-ui/Button';
 import ExploreAction from 'material-ui-icons/Explore';
 
+import DeleteIcon from 'material-ui-icons/Delete';
+import EditIcon from 'material-ui-icons/ModeEdit';
+
 import {
   FluidContent,
   BgImage,
@@ -19,7 +22,7 @@ import {
 
 import Popup from 'components/Popup';
 
-import { BACKGROUND_COLOR } from '../../../colors';
+import { BACKGROUND_COLOR, MAIN_COLOR, SECONDARY_COLOR } from '../../../colors';
 import * as authData from '../../../data/auth';
 import { ADMIN, CLUB_MANAGER } from '../../../constants';
 import UpdateClubForm from './UpdateClubForm';
@@ -45,24 +48,26 @@ export default function ClubDetailView(props) {
             <Title invert>{props.name}</Title>
             <Text>{props.description}</Text>
             <Flex mt="15px" wrap>
-              <Box>
-                <Button href={props.website} target="_blank" rel="noopener noreferrer" color="accent">
+              <Box p={1}>
+                <Button href={props.website} target="_blank" rel="noopener noreferrer" color="secondary">
                   <Explore /> Site internet
                 </Button>
               </Box>
               {
-                authData.hasRole([ADMIN, CLUB_MANAGER]) && [
-                  <Box key={1}>
-                    <Button color="primary" onClick={props.onDelete}>
-                      Supprimer
-                    </Button>
-                  </Box>,
-                  <Box key={2}>
-                    <Button color="primary" onClick={props.onEdit}>
-                      Modifier
-                    </Button>
-                  </Box>
-                ]
+                props.isAdmin &&
+                <Box p={1}>
+                  <Button fab mini color="primary" onClick={props.onEdit}>
+                    <EditIcon />
+                  </Button>
+                </Box>
+              }
+              {
+                authData.hasRole([ADMIN, CLUB_MANAGER]) &&
+                <Box p={1}>
+                  <Button fab mini color="secondary" onClick={props.onDelete}>
+                    <DeleteIcon />
+                  </Button>
+                </Box>
               }
             </Flex>
           </Box>
@@ -84,8 +89,8 @@ export default function ClubDetailView(props) {
       <Tabs
         value={props.tabIndex}
         onChange={props.changeTab}
-        indicatorColor="primary"
-        textColor="primary"
+        indicatorColor={SECONDARY_COLOR}
+        textColor={MAIN_COLOR}
         centered
       >
         <Tab label="Membres" />
@@ -97,4 +102,4 @@ export default function ClubDetailView(props) {
       </FluidContent>
     </div>
   );
-};
+}

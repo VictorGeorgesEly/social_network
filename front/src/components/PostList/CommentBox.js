@@ -1,10 +1,8 @@
 // @flow
 
-import React, { Component } from 'react';
+import React, { Component, KeyboardEvent } from 'react';
 
 import styled from 'styled-components';
-
-import { EditorState } from 'draft-js';
 
 const Input = styled.textarea`
   border: 2px solid #999999;
@@ -22,43 +20,52 @@ const Input = styled.textarea`
   }
 `;
 
-class CommentBox extends Component {
+type Props = {
+  onComment: (message: string) => mixed,
+};
+
+type State = {
+  message: string,
+  rows: number,
+  shift: boolean,
+};
+
+class CommentBox extends Component<Props, State> {
   state = {
     message: '',
     rows: 2,
     shift: false,
-    editorState: EditorState.createEmpty(),
   };
 
-  keyDown = (event) => {
+  keyDown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' && !this.state.shift) {
       event.preventDefault();
-    };
+    }
     if (event.key === 'Shift') {
       this.setState({ shift: true });
-    };
-  };
+    }
+  }
 
-  keyUp = (event) => {
+  keyUp = (event: KeyboardEvent) => {
     if (event.key === 'Shift') {
       this.setState({ shift: false });
-    };
+    }
 
     if (event.key === 'Enter') {
       if (!this.state.shift && this.state.message !== '') {
         this.props.onComment(this.state.message);
         this.setState({ message: '' });
-      };
-    };
-  };
+      }
+    }
+  }
 
-  change = (event) => {
-    const numRows = event.target.value.split('\n').length;
+  change = (event: SyntheticEvent<HTMLInputElement>) => {
+    const numRows = event.currentTarget.value.split('\n').length;
     this.setState({
-      message: event.target.value,
+      message: event.currentTarget.value,
       rows: Math.min(numRows + 1, 5),
     });
-  };
+  }
 
   render() {
     return (
@@ -73,7 +80,7 @@ class CommentBox extends Component {
           onChange={this.change} />
       </div>
     );
-  };
-};
+  }
+}
 
 export default CommentBox;

@@ -14,7 +14,6 @@ import TextField from 'material-ui/TextField';
 import DatePicker from '../../../components/DatePicker';
 import * as userData from '../../../data/users/student';
 
-
 export default class AddClubForm extends React.Component {
 
   state = {
@@ -33,7 +32,7 @@ export default class AddClubForm extends React.Component {
         creation: new Date(form.creation),
         description: form.description,
         website: form.website,
-      })
+      });
     }
   }
 
@@ -63,7 +62,7 @@ export default class AddClubForm extends React.Component {
     const props = this.props;
     const state = this.state;
     return (
-      <Dialog open={props.open} transition={Slide} onRequestClose={props.handleRequestClose} >
+      <Dialog open={props.open} transition={Slide} onClose={props.handleRequestClose} >
         <DialogTitle>{props.title}</DialogTitle>
         <DialogContent>
           <TextField
@@ -114,11 +113,11 @@ export default class AddClubForm extends React.Component {
           <Button onClick={props.handleRequestClose} color="primary">
             Annuler
           </Button>
-          <Button color="accent" onClick={this.handleSave}>
+          <Button color="secondary" onClick={this.handleSave}>
             Enregistrer
           </Button>
         </DialogActions>
       </Dialog>
     );
   }
-};
+}

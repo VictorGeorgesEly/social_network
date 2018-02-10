@@ -8,6 +8,7 @@ import com.iseplive.api.dao.image.MatchedRepository;
 import com.iseplive.api.dao.media.MediaFactory;
 import com.iseplive.api.dao.media.MediaRepository;
 import com.iseplive.api.dto.VideoEmbedDTO;
+import com.iseplive.api.dto.view.MatchedView;
 import com.iseplive.api.entity.media.*;
 import com.iseplive.api.entity.user.Student;
 import com.iseplive.api.exceptions.IllegalArgumentException;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by Guillaume on 01/08/2017.
@@ -30,9 +32,6 @@ import java.util.List;
  */
 @Service
 public class MediaService {
-
-  @Autowired
-  ImageService imageService;
 
   @Autowired
   MediaUtils mediaUtils;
@@ -69,6 +68,8 @@ public class MediaService {
   private final int WIDTH_IMAGE_SIZE = 1280;
   private final int WIDTH_IMAGE_SIZE_THUMB = 768;
 
+  private final int PHOTOS_PER_PAGE = 30;
+
   public Page<Media> getAllGalleryGazetteVideoPublic(int page) {
     return mediaRepository.findAllByMediaTypeInAndPost_Author_AuthorTypeAndPost_isPrivateOrderByCreationDesc(
       Arrays.asList(MediaType.GALLERY, MediaType.GAZETTE, MediaType.VIDEO),
@@ -85,8 +86,11 @@ public class MediaService {
 
   public Gazette createGazette(String title, MultipartFile file) {
     String random = mediaUtils.randomName();
-    String gazettePath = mediaUtils.resolvePath(
-      gazetteDir, random + "_" + title + ".pdf", false);
+    String gazettePath = String.format(
+      "%s_%s.pdf",
+      mediaUtils.resolvePath(gazetteDir, random, false),
+      title
+    );
 
     mediaUtils.saveFile(gazettePath, file);
 
@@ -102,9 +106,11 @@ public class MediaService {
     document.setCreation(new Date());
 
     String random = mediaUtils.randomName();
-    String documentPath = mediaUtils.resolvePath(
-      documentDir, random + "_" + fileUploaded.getOriginalFilename(),
-      false, document.getCreation());
+    String documentPath = String.format(
+      "%s_%s",
+      mediaUtils.resolvePath(documentDir, random,false, document.getCreation()),
+      fileUploaded.getOriginalFilename()
+    );
 
     mediaUtils.saveFile(documentPath, fileUploaded);
 
@@ -119,32 +125,34 @@ public class MediaService {
     gallery.setName(name);
     gallery.setCreation(new Date());
 
-    List<Image> images = new ArrayList<>();
-    files.forEach(file -> {
-      images.add(addImage(file));
-    });
-    gallery.setImages(images);
+    Gallery galleryRes = mediaRepository.save(gallery);
 
-    return mediaRepository.save(gallery);
+    List<Image> images = new ArrayList<>();
+    files.forEach(file -> images.add(addImage(file, galleryRes)));
+    mediaRepository.save(images);
+
+    return galleryRes;
   }
 
   public Image addImage(MultipartFile file) {
-    Image image = new Image();
-    image.setCreation(new Date());
+    return addImage(file, null);
+  }
 
-    String name = mediaUtils.randomName();
-    String path = mediaUtils.resolvePath(imageDir, name, false, image.getCreation());
-    String pathThumb = mediaUtils.resolvePath(imageDir, name, true, image.getCreation());
-    mediaUtils.saveJPG(file, WIDTH_IMAGE_SIZE, path);
-    mediaUtils.saveJPG(file, WIDTH_IMAGE_SIZE_THUMB, pathThumb);
-
-    image.setFullSizeUrl(mediaUtils.getPublicUrlImage(path));
-    image.setThumbUrl(mediaUtils.getPublicUrlImage(pathThumb));
-    return mediaRepository.save(image);
+  public void deleteImageFile(Image image) {
+    mediaUtils.removeIfExistPublic(image.getThumbUrl());
+    mediaUtils.removeIfExistPublic(image.getFullSizeUrl());
+    mediaUtils.removeIfExistPublic(image.getOriginalUrl());
   }
 
   public void tagStudentInImage(Long imageId, Long studentId, TokenPayload auth) {
-    Image image = imageService.getImage(imageId);
+    Image image = getImage(imageId);
+    List<Matched> matchedList = matchedRepository.findAllByImage(image);
+    int res = matchedList.stream()
+      .filter(m -> m.getMatch().getId().equals(studentId))
+      .collect(Collectors.toList()).size();
+    if (res > 0) {
+      throw new IllegalArgumentException("this user is already tagged");
+    }
     Student match = studentService.getStudent(studentId);
     Student owner = studentService.getStudent(auth.getId());
     Matched matched = new Matched();
@@ -155,7 +163,7 @@ public class MediaService {
   }
 
   public void untagStudentInImage(Long imageId, Long studentId, TokenPayload auth) {
-    Image image = imageService.getImage(imageId);
+    Image image = getImage(imageId);
     List<Matched> matchedList = matchedRepository.findAllByImage(image);
     Student match = studentService.getStudent(studentId);
     Student owner = studentService.getStudent(auth.getId());
@@ -179,8 +187,11 @@ public class MediaService {
 
   public Video uploadVideo(String name, MultipartFile videoFile) {
     String random = mediaUtils.randomName();
-    String videoPath = mediaUtils.resolvePath(
-      videoDir, random + "_" + videoFile.getName() + ".mp4", false);
+    String videoPath = String.format(
+      "%s_%s.mp4",
+      mediaUtils.resolvePath(videoDir, random, false),
+      videoFile.getName()
+    );
 
     mediaUtils.saveFile(videoPath, videoFile);
 
@@ -205,5 +216,70 @@ public class MediaService {
       throw new IllegalArgumentException("could not find this image");
     }
     return image.getMatched();
+  }
+
+  public Page<MatchedView> getPhotosTaggedByStudent(Long studentId, int page) {
+    return matchedRepository.findAllByMatchId(studentId, new PageRequest(page, PHOTOS_PER_PAGE)).map(m -> {
+      MatchedView matchedView = new MatchedView();
+      matchedView.setId(m.getId());
+      matchedView.setImage(m.getImage());
+      matchedView.setOwner(m.getOwner());
+      Gallery gallery = m.getImage().getGallery();
+      if (gallery != null) {
+        matchedView.setGalleryId(gallery.getId());
+      }
+      return matchedView;
+    });
+  }
+
+  public List<Image> getGalleryImages(Long id) {
+    Gallery gallery = getGallery(id);
+    return gallery.getImages();
+  }
+
+  public void deleteImagesGallery(List<Long> ids) {
+    List<Image> images = imageRepository.findImageByIdIn(ids);
+    images.forEach(this::deleteImageFile);
+    imageRepository.delete(images);
+  }
+
+  private Image addImage(MultipartFile file, Gallery gallery) {
+    Image image = new Image();
+    image.setCreation(new Date());
+    image.setGallery(gallery);
+
+    String name = mediaUtils.randomName();
+
+    String path = mediaUtils.resolvePath(imageDir, name, false, image.getCreation());
+    mediaUtils.saveJPG(file, WIDTH_IMAGE_SIZE, path);
+
+    String pathThumb = mediaUtils.resolvePath(imageDir, name, true, image.getCreation());
+    mediaUtils.saveJPG(file, WIDTH_IMAGE_SIZE_THUMB, pathThumb);
+
+    String pathOriginal = String.format(
+      "%s_%s",
+      mediaUtils.resolvePath(imageDir, name, false, image.getCreation()),
+      file.getOriginalFilename().replaceAll(" ", "-")
+    );
+    mediaUtils.saveFile(pathOriginal, file);
+
+    image.setFullSizeUrl(mediaUtils.getPublicUrlImage(path));
+    image.setThumbUrl(mediaUtils.getPublicUrlImage(pathThumb));
+    image.setOriginalUrl(mediaUtils.getPublicUrl(pathOriginal));
+    return mediaRepository.save(image);
+  }
+
+  private Image getImage(Long id) {
+    Image img = imageRepository.findOne(id);
+    if (img != null) {
+      return img;
+    }
+    throw new RuntimeException("could not get the image with id: " + id);
+  }
+
+  public void addImagesGallery(Gallery gallery, List<MultipartFile> files) {
+    List<Image> images = new ArrayList<>();
+    files.forEach(file -> images.add(addImage(file, gallery)));
+    mediaRepository.save(images);
   }
 }

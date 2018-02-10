@@ -1,6 +1,7 @@
 package com.iseplive.api.entity.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.iseplive.api.constants.AuthorTypes;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -14,13 +15,16 @@ import java.util.Set;
  * back
  */
 @Entity
-@DiscriminatorValue("student")
+@DiscriminatorValue(AuthorTypes.STUDENT)
 public class Student extends Author implements UserDetails {
 
   private Integer promo;
+
   private String firstname;
   private String lastname;
+
   private Date birthDate;
+
   private String phone;
   private String address;
 
@@ -29,10 +33,12 @@ public class Student extends Author implements UserDetails {
 
   private String mail;
   private String mailISEP;
+
   private String facebook;
   private String twitter;
   private String instagram;
   private String snapchat;
+
   private Boolean allowNotifications = false;
 
   private String photoUrl;

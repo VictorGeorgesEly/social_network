@@ -51,7 +51,7 @@ const Member = (props) => {
 export default function MembersTab(props) {
   return (
     <Loader loading={props.loading}>
-      <Flex wrap>
+      <Flex wrap style={{ minHeight: 400 }}>
         {props.members.length === 0 && <Text>Aucun membre</Text>}
         {
           props.members.map(m => {
@@ -61,7 +61,7 @@ export default function MembersTab(props) {
                   authData.isLoggedIn() ?
                     <Link to={`/annuaire/${m.member.id}`}>
                       <Member
-                        url={m.member.photoUrl}
+                        url={m.member.photoUrlThumb}
                         name={m.member.firstname + ' ' + m.member.lastname}
                         role={clubData.getClubRoleName(m.role.name)}
                         promotion={m.member.promo}
@@ -69,17 +69,17 @@ export default function MembersTab(props) {
                     </Link>
                     :
                     <Member
-                      url={m.member.photoUrl}
+                      url={m.member.photoUrlThumb}
                       name={m.member.firstname + ' ' + m.member.lastname}
                       role={clubData.getClubRoleName(m.role.name)}
                       promotion={m.member.promo}
                     />
                 }
               </Box>
-            )
+            );
           })
         }
       </Flex>
     </Loader>
   );
-};
+}

@@ -108,20 +108,22 @@ public class StudentImportService {
       } else { // if user doesn't exist
 
         // check photo exist
-        if (photosToAdd.get(s.getStudentId()) != null) {
+//        if (photosToAdd.get(s.getStudentId()) != null) {
           studentsToCreate.add(s);
           res.incrImport();
-        } else {
-          res.incrStudentPhotoNotMatched();
-        }
+//        } else {
+//          res.incrStudentPhotoNotMatched();
+//        }
       }
     });
 
     studentRepository.save(studentsToCreate);
     // add photo to new students
     for (Student s: studentsToCreate) {
-      studentService.addProfileImage(s.getStudentId(), photosToAdd.get(s.getStudentId()));
-      res.incrPhotoAdded();
+      if (photosToAdd.get(s.getStudentId()) != null) {
+        studentService.addProfileImage(s.getStudentId(), photosToAdd.get(s.getStudentId()));
+        res.incrPhotoAdded();
+      }
     }
 
     return res;

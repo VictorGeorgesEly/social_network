@@ -2,10 +2,28 @@
 
 import React from 'react';
 
+import type {Node} from 'react';
+
 import TextField from 'material-ui/TextField';
 import { MenuItem } from 'material-ui/Menu';
 
-export default class Autocomplete extends React.Component {
+import type { AxiosPromise } from 'axios';
+
+import type { Student } from '../../data/users/type';
+
+type Props = {
+  renderSuggestion: (value: Student) => Node,
+  onSelect: (value: Student, fullname: string) => mixed,
+  search: () => AxiosPromise<Student[]>,
+}
+
+type State = {
+  results: Student[],
+  value: string,
+  focus: boolean,
+}
+
+export default class Autocomplete extends React.Component<Props, State> {
 
   state = {
     results: [],
@@ -13,39 +31,45 @@ export default class Autocomplete extends React.Component {
     focus: false,
   }
 
-  renderResults = (val) => {
+  componentWillReceiveProps(props) {
+    if (props.value || props.value === '') {
+      this.setState({ value: props.value });
+    }
+  }
+
+  renderResults = (val: Student) => {
     return (
       <MenuItem key={val.id} onMouseDown={this.handleSelect(val)}>
         {this.props.renderSuggestion(val)}
       </MenuItem>
-    )
+    );
   }
 
-  handleSelect = (val) => (event) => {
-    this.setState({ value: val.firstname + ' ' + val.lastname });
-    this.props.onSelect(val);
+  handleSelect = (val: Student) => () => {
+    const fullName = val.firstname + ' ' + val.lastname;
+    this.setState({ value: fullName });
+    this.props.onSelect(val, fullName);
   }
 
   handleSuggestionsFetchRequested = (value) => {
     this.props.search(value).then(list => {
-      this.setState({ results: list })
+      this.setState({ results: list });
     });
   }
 
   handleChange = (event) => {
     const val = event.target.value;
     this.setState({ value: val });
-    if (val.length > 0) {
-      this.handleSuggestionsFetchRequested(val);
-    }
+    this.handleSuggestionsFetchRequested(val);
   }
 
   render() {
     const { label } = this.props;
     const { results, value, focus } = this.state;
-    const showResults = (focus && value.length > 0 && results.length > 0);
+    const showResults = (value && focus && value.length > 0 && results.length > 0);
     const autocompleteStyle = {
       position: 'relative',
+      width: 300,
     };
     const resStyle = {
       position: 'absolute',
@@ -53,7 +77,7 @@ export default class Autocomplete extends React.Component {
       padding: 10,
       width: '100%',
       background: 'white',
-      zIndex: 1,
+      zIndex: 2,
       overflow: 'auto',
       maxHeight: 200,
       boxShadow: '0 0 10px rgba(0,0,0,0.1)',
@@ -63,6 +87,8 @@ export default class Autocomplete extends React.Component {
         <TextField
           autoFocus
           fullWidth
+          type="text"
+          autoComplete="off"
           label={label}
           value={value}
           onFocus={() => this.setState({ focus: true })}
@@ -79,7 +105,7 @@ export default class Autocomplete extends React.Component {
         }
 
       </div>
-    )
+    );
   }
 
 }

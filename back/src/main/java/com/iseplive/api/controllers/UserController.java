@@ -7,7 +7,9 @@ import com.iseplive.api.dto.StudentDTO;
 import com.iseplive.api.dto.StudentUpdateAdminDTO;
 import com.iseplive.api.dto.StudentUpdateDTO;
 import com.iseplive.api.dto.view.ClubMemberView;
+import com.iseplive.api.dto.view.MatchedView;
 import com.iseplive.api.dto.view.PostView;
+import com.iseplive.api.dto.view.StudentWithRoleView;
 import com.iseplive.api.entity.user.Role;
 import com.iseplive.api.entity.user.Student;
 import com.iseplive.api.services.*;
@@ -46,11 +48,32 @@ public class UserController {
   AuthService authService;
 
   @Autowired
+  MediaService mediaService;
+
+  @Autowired
   JsonUtils jsonUtils;
 
   @GetMapping("/student")
   public Page<Student> getAllStudents(@RequestParam(defaultValue = "0") int page) {
     return studentService.getAll(page);
+  }
+
+  @PostMapping("/student")
+  @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER})
+  public Student createStudent(@RequestBody StudentDTO dto) {
+    return studentService.createStudent(dto);
+  }
+
+  @PutMapping("/student")
+  @RolesAllowed({Roles.STUDENT})
+  public Student updateStudent(@AuthenticationPrincipal TokenPayload auth,
+                               @RequestBody StudentUpdateDTO dto) {
+    return studentService.updateStudent(dto, auth.getId());
+  }
+
+  @GetMapping("/student/admin")
+  public Page<StudentWithRoleView> getAllStudentsAdmin(@RequestParam(defaultValue = "0") int page) {
+    return studentService.getAllForAdmin(page);
   }
 
   @GetMapping("/student/search")
@@ -59,10 +82,23 @@ public class UserController {
     return studentService.search(name, promos, sort, page);
   }
 
+  @GetMapping("/student/search/admin")
+  @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER})
+  public Page<StudentWithRoleView> searchStudentsAdmin(String name, String roles, String promos, String sort,
+                                                       @RequestParam(defaultValue = "0") int page) {
+    return studentService.searchAdmin(name, roles, promos, sort, page);
+  }
+
   @GetMapping("/student/{id}/post")
   @RolesAllowed({Roles.STUDENT})
   public Page<PostView> getPostsStudent(@PathVariable Long id, @RequestParam(defaultValue = "0") int page) {
     return postService.getPostsAuthor(id, authService.isUserAnonymous(), page);
+  }
+
+  @GetMapping("/student/{id}/photo")
+  @RolesAllowed({Roles.STUDENT})
+  public Page<MatchedView> getPhotosStudent(@PathVariable Long id, @RequestParam(defaultValue = "0") int page) {
+    return mediaService.getPhotosTaggedByStudent(id, page);
   }
 
   @GetMapping("/student/{id}/club")
@@ -77,22 +113,16 @@ public class UserController {
     return studentService.getStudent(id);
   }
 
+  @PutMapping("/student/{id}/archive")
+  @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER})
+  public void toggleArchiveStudent(@PathVariable Long id) {
+    studentService.toggleArchiveStudent(id);
+  }
+
   @GetMapping("/student/{id}/roles")
   @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER})
   public Set<Role> getStudentRoles(@PathVariable Long id) {
     return studentService.getStudentRoles(id);
-  }
-
-  @PostMapping("/student")
-  @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER})
-  public Student createStudent(@RequestBody StudentDTO dto) {
-    return studentService.createStudent(dto);
-  }
-
-  @PutMapping("/student")
-  @RolesAllowed({Roles.ADMIN, Roles.USER_MANAGER, Roles.STUDENT})
-  public Student updateStudent(@AuthenticationPrincipal TokenPayload auth, @RequestBody StudentUpdateDTO dto) {
-    return studentService.updateStudent(dto, auth.getId());
   }
 
   @PutMapping("/student/admin")

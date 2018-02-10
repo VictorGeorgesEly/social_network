@@ -5,7 +5,10 @@ import styled from 'styled-components';
 
 import IconButton from 'material-ui/IconButton';
 import CloseIcon from 'material-ui-icons/Close';
+import FileDownload from 'material-ui-icons/FileDownload';
+import Button from 'material-ui/Button';
 
+import Auth from '../Auth/AuthComponent';
 
 import {
   BgImage,
@@ -19,7 +22,7 @@ const Wrapper = styled.div`
   position: fixed;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.95);
+  background: black;
   top: 0;
   left: 0;
   z-index: 1100;
@@ -31,7 +34,6 @@ const ViewStyle = styled.div`
   margin: 5vh;
 `;
 
-
 class View extends Component {
 
   state = {
@@ -40,14 +42,14 @@ class View extends Component {
 
   componentWillUnmount() {
     this.removeEscListener();
-  };
+  }
 
   removeEscListener() {
     document.removeEventListener('keydown', this.keyHandler);
   }
 
   openMatcher = (open) => {
-    this.setState({ matcherOpen: open })
+    this.setState({ matcherOpen: open });
   }
 
   componentWillReceiveProps(props) {
@@ -64,33 +66,59 @@ class View extends Component {
   keyHandler = ({ key }) => {
     if (key === 'Escape' && !this.state.matcherOpen) {
       this.props.onEscKey();
-    };
+    }
   };
 
   render() {
-    const { visible, data, image, index, internalRefresh } = this.props;
+    const lightButton = {
+      color: 'white',
+      background: 'rgba(255,255,255,0.1)'
+    };
+    const {
+      visible,
+      data,
+      image,
+      imageOriginal,
+      internalRefresh,
+      matcher,
+    } = this.props;
     if (!visible) return null;
     return (
       <Wrapper visible={visible}>
         <IconButton
-          style={{ float: 'right' }}
-          color="contrast"
+          style={{
+            float: 'right',
+            top: 20,
+            right: 20,
+            zIndex: 3,
+          }}
           onClick={() => this.props.onEscKey()}>
-          <CloseIcon />
+          <CloseIcon style={{ color: 'white' }} />
         </IconButton>
         <ViewStyle>
           <BgImage src={image} size="contain" mh="80vh" />
         </ViewStyle>
-        {
-          this.props.matcher &&
-          <PeopleMatcher
-            internalRefresh={internalRefresh}
-            onOpenMatcher={this.openMatcher}
-            image={this.props.data} />
-        }
+        <div style={{ margin: 30 }}>
+          <Button
+            style={lightButton}
+            download
+            size="small"
+            href={backUrl + (imageOriginal || image)}>
+            <FileDownload style={{ marginRight: 5 }} /> Télecharger
+        </Button>
+          <Auth logged>
+            {
+              matcher &&
+              <PeopleMatcher
+                internalRefresh={internalRefresh}
+                onOpenMatcher={this.openMatcher}
+                image={data} />
+            }
+          </Auth>
+        </div>
       </Wrapper>
     );
-  };
-};
+  }
+}
 
 export default View;

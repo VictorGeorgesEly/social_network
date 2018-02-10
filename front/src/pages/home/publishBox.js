@@ -20,7 +20,15 @@ import * as pollData from 'data/media/poll';
 import * as imageData from 'data/media/image';
 import * as videoData from 'data/media/video';
 import * as authData from 'data/auth';
-import type { PostDTO } from 'data/post/type';
+
+import type {
+  Post as PostType,
+    PostCreation as PostCreationType,
+} from '../../data/post/type';
+
+import type { Media as MediaType } from '../../data/media/type';
+import type { Form as FormType } from '../../components/PostList/MediaForms.type';
+
 
 import { makeCancelable } from '../../data/util';
 
@@ -44,6 +52,8 @@ const PublishBox = styled.div`
   background: ${props => props.theme.main};
   margin-bottom: 20px;
   padding: 20px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
 `;
 
 const TitleBox = styled.input`
@@ -71,7 +81,7 @@ function SendAs(props) {
       <Box><Text color={props.c || 'white'} m="0">{author && author.name}</Text></Box>
     </Flex>
   );
-};
+}
 
 const mediaAvailable = [
   {
@@ -96,7 +106,37 @@ const mediaAvailable = [
   // },
 ];
 
-class PublishBoxView extends Component {
+type PublishBoxProps = {
+
+};
+
+type CustomAuthorType = {
+  id: number,
+  name: string,
+  image: string,
+  type: 'club' | 'student',
+  isAdmin: boolean,
+}
+
+type PublishBoxState = {
+  title: string,
+  message: string,
+  isPrivateMessage: boolean,
+  selectedIndex: number,
+  mediaMenuOpen: boolean,
+  authorMenuOpen: boolean,
+  author: ?CustomAuthorType,
+  authorList: CustomAuthorType[],
+  mediaCreatorOpen: boolean,
+  form: ?FormType,
+  mediaSelected: ?MediaType,
+  isUploading: boolean,
+  uploadMode: string,
+  messageRows: number,
+  anchorEl: ?any,
+};
+
+class PublishBoxView extends Component<PublishBoxProps, PublishBoxState> {
   state = {
     title: '',
     message: '',
@@ -112,14 +152,17 @@ class PublishBoxView extends Component {
     isUploading: false,
     uploadMode: 'undeterminate',
     messageRows: 2,
+    anchorEl: null,
   };
+
+  getAuthorsReq: { cancel: Function };
 
   componentDidMount() {
     if (authData.isLoggedIn()) {
 
       const savedMessage = localStorage.getItem('saved-message');
       if (savedMessage) {
-        this.setState({ message: savedMessage })
+        this.setState({ message: savedMessage });
       }
 
       this.getAuthorsReq = makeCancelable(postData.getAuthors());
@@ -128,15 +171,15 @@ class PublishBoxView extends Component {
           return {
             id: a.id,
             name: a.authorType === 'student' ? 'Moi' : a.name,
-            image: a.authorType === 'club' ? a.logoUrl : a.photoUrl,
+            image: a.authorType === 'club' ? a.logoUrl : a.photoUrlThumb,
             type: a.authorType,
             isAdmin: a.authorType === 'club' ? a.admin : false,
           };
         });
         this.setState({ authorList: authors, author: authors[0] });
       }).catch(err => { });
-    };
-  };
+    }
+  }
 
   componentWillUnmount() {
     if (this.getAuthorsReq) {
@@ -144,79 +187,87 @@ class PublishBoxView extends Component {
     }
   }
 
-  onTitleChange = (event) => {
-    this.setState({ title: event.target.value });
+  onTitleChange = (event: SyntheticEvent<HTMLInputElement>) => {
+    this.setState({ title: event.currentTarget.value });
   };
 
-  onMessageChange = (e) => {
-    localStorage.setItem('saved-message', e.target.value);
-    const numLines = e.target.value.split('\n').length;
+  onMessageChange = (event: SyntheticEvent<HTMLInputElement>) => {
+    const message = event.currentTarget.value;
+    localStorage.setItem('saved-message', message);
+    const numLines = message.split('\n').length;
     this.setState({
-      message: e.target.value,
+      message,
       messageRows: Math.min(numLines + 1, 15),
     });
   };
 
   onPrivateToggle = () => {
-    this.setState({ isPrivateMessage: !this.state.isPrivateMessage })
+    this.setState({ isPrivateMessage: !this.state.isPrivateMessage });
   };
 
-  publishPost() {
-    const dto: PostDTO = {
+  async publishPost() {
+    if (!this.state.author) return;
+
+    const dto: PostCreationType = {
       authorId: this.state.author.id,
       content: this.state.message,
       title: this.state.title,
       private: this.state.isPrivateMessage,
     };
-    return postData.createPost(dto)
-      .then(res => res.data.id)
-      .then(id => {
-        return postData.publishPost(id)
-          .then(() => id);
-      });
-  };
 
-  handleErrors = (err) => {
-    if (err.response) {
-      sendAlert("Le post n'a pu être publié", 'error');
-    }
+    const postRes = await postData.createPost(dto);
+    await postData.publishPost(postRes.data.id);
+
+    return postRes.data.id;
   }
 
-  onPublish = () => {
+  handleErrors = (err) => {
+    sendAlert("Le post n'a pu être publié", 'error');
+  }
+
+  onPublish = async () => {
     if (this.state.mediaSelected) {
       const toUpload = ['gallery', 'video', 'document', 'image'];
       if (toUpload.includes(this.state.mediaSelected.id)) {
         this.setState({ isUploading: true });
       }
 
-      this.createMedia()
-        .then(res => res.data.id)
-        .then(mediaId => {
-          return this.publishPost()
-            .then((postId) => ({ mediaId, postId }));
-        })
-        .then((ids) => {
-          return postData.addMedia(ids.postId, ids.mediaId)
-            .then(() => ids.postId)
-        })
-        .then(this.closeMediaCreator)
-        .then(() => {
-          sendAlert("Post publié");
-          localStorage.removeItem('saved-message');
-          this.setState({ title: '', message: '', isUploading: false })
-        })
-        .then(this.props.refreshPosts)
-        .catch(this.handleErrors);
+      let mediaRes, postResId;
+
+      try {
+        mediaRes = await this.createMedia();
+        postResId = await this.publishPost();
+      } catch (error) {
+        this.handleErrors(error);
+      }
+
+      if (!mediaRes || !postResId) {
+        this.handleErrors();
+        return;
+      }
+
+      await postData.addMedia(postResId, mediaRes.data.id);
+      this.closeMediaCreator();
+
+      sendAlert("Post publié");
+      localStorage.removeItem('saved-message');
+      this.setState({ title: '', message: '', isUploading: false });
+      this.props.refreshPosts();
+
       return;
-    };
-    this.publishPost()
-      .then(res => {
-        sendAlert("Post publié");
-        localStorage.removeItem('saved-message');
-        this.setState({ title: '', message: '' })
-      })
-      .then(this.props.refreshPosts)
-      .catch(this.handleErrors);
+    }
+
+    try {
+      const postRes = await this.publishPost();
+      sendAlert("Post publié");
+      localStorage.removeItem('saved-message');
+
+      this.setState({ title: '', message: '' });
+
+      this.props.refreshPosts();
+    } catch (error) {
+      this.handleErrors(error);
+    }
   };
 
   handleMediaSelect = (item) => {
@@ -243,9 +294,11 @@ class PublishBoxView extends Component {
     });
   };
 
-
   changeAuthor = (event) => {
-    this.setState({ authorMenuOpen: true, anchorEl: event.currentTarget });
+    this.setState({
+      authorMenuOpen: true,
+      anchorEl: event.currentTarget
+    });
   };
 
   closeMediaCreator = () => {
@@ -262,30 +315,30 @@ class PublishBoxView extends Component {
     if (author && author.type === 'club') {
       if (title && message && title !== '' && message !== '') {
         return true;
-      };
+      }
     } else {
       if (message && message !== '') {
-        return true
-      };
-    };
+        return true;
+      }
+    }
     return false;
-  };
+  }
 
   getMediaPublishList() {
     const { author } = this.state;
     if (author && author.type === 'club') {
       let list = [
         ...mediaAvailable,
-        { id: 'gallery', name: 'Gallerie' },
+        { id: 'gallery', name: 'Galerie' },
         { id: 'event', name: 'Evenement' },
       ];
       if (author.isAdmin) {
-        list.push({ id: 'gazette', name: 'Gazette' })
-      };
+        list.push({ id: 'gazette', name: 'Gazette' });
+      }
       return list;
-    };
+    }
     return mediaAvailable;
-  };
+  }
 
   createMedia = () => {
     switch (this.state.mediaSelected.id) {
@@ -307,7 +360,7 @@ class PublishBoxView extends Component {
         return mediaData.createGazette(this.state.form);
       default:
         break;
-    };
+    }
   };
 
   renderForm() {
@@ -330,8 +383,8 @@ class PublishBoxView extends Component {
         return <EventForm update={this.onFormChange} />;
       default:
         break;
-    };
-  };
+    }
+  }
 
   render() {
     const { author, isUploading } = this.state;
@@ -365,17 +418,16 @@ class PublishBoxView extends Component {
           }
           <Flex align="center" wrap>
             <Box>
-              <IconButton color="contrast" onClick={this.openMediaMenu}>
-                <AddCircleIcon />
+              <IconButton onClick={this.openMediaMenu}>
+                <AddCircleIcon style={{ color: 'white' }} />
               </IconButton>
             </Box>
             <Box ml="auto">
               <FormControlLabel
-                color="accent"
+                color="secondary"
                 control={
                   <Checkbox
                     checked={this.state.isPrivateMessage}
-                    value={this.state.isPrivateMessage}
                     style={{ color: 'white' }}
                     onChange={this.onPrivateToggle} />
                 }
@@ -388,7 +440,7 @@ class PublishBoxView extends Component {
             </Box>
             <Box ml="10px">
               <Button raised
-                color="accent"
+                color="secondary"
                 style={{ float: "right" }}
                 onClick={this.onPublish}
                 disabled={!canPublish || isUploading}>Publier</Button>
@@ -405,7 +457,7 @@ class PublishBoxView extends Component {
           <Menu
             anchorEl={this.state.anchorEl}
             open={this.state.authorMenuOpen}
-            onRequestClose={this.handleAuthorMenuClose}>
+            onClose={this.handleAuthorMenuClose}>
             {
               this.state.authorList.map(a => {
                 return (
@@ -422,10 +474,10 @@ class PublishBoxView extends Component {
           <Menu
             anchorEl={this.state.anchorEl}
             open={this.state.mediaMenuOpen}
-            onRequestClose={this.handleMediaMenuClose}>
+            onClose={this.handleMediaMenuClose}>
             {
               this.getMediaPublishList().map(l => {
-                return <MenuItem key={l.name} onClick={() => this.handleMediaSelect(l)}>{l.name}</MenuItem>
+                return <MenuItem key={l.name} onClick={() => this.handleMediaSelect(l)}>{l.name}</MenuItem>;
               })
             }
           </Menu>
@@ -433,7 +485,7 @@ class PublishBoxView extends Component {
         </PublishBox>
       </div>
     );
-  };
-};
+  }
+}
 
 export default PublishBoxView;

@@ -1,10 +1,12 @@
+// @flow
+
 import React from 'react';
 
 import IconButton from 'material-ui/IconButton';
 
 const iconStyle = {
   width: 40,
-}
+};
 
 const MediaIcon = props => (
   <IconButton>
@@ -12,7 +14,7 @@ const MediaIcon = props => (
       <img style={iconStyle} src={`/img/svg/social-media/${props.icon}`} alt={props.iconAlt} />
     </a>
   </IconButton>
-)
+);
 
 export default class SocialMedia extends React.Component {
   render() {
@@ -24,6 +26,6 @@ export default class SocialMedia extends React.Component {
         {snapchat && <MediaIcon url={snapchat} icon="Snapchat.svg" iconAlt="snapchat" />}
         {instagram && <MediaIcon url={instagram} icon="Instagram.svg" iconAlt="instagram" />}
       </div>
-    )
+    );
   }
 }

@@ -23,7 +23,7 @@ export default function Author(props) {
       return (
         <Link to={`/associations/${a.id}`}>
           <Flex direction="column">
-            <Image src={a.logoUrl} alt="logo-club" w="60px" ml="auto" />
+            <Image src={a.logoUrl} alt="logo-club" w="60px" h="60px" ml="auto" />
             <Sub>{a.name}</Sub>
           </Flex>
         </Link>
@@ -31,12 +31,12 @@ export default function Author(props) {
     case 'student':
       return (
         <Flex direction="column">
-          <ProfileImage src={a.photoUrl} sz="40px" ml="auto" />
+          <ProfileImage src={a.photoUrlThumb} sz="40px" ml="auto" />
           <Sub>{a.firstname}<br />{a.lastname}</Sub>
         </Flex>
       );
     default:
       break;
-  };
+  }
   return null;
-};
+}

@@ -4,14 +4,19 @@ import React, { Component } from 'react';
 
 import ClubView from './view';
 
-
 import * as clubData from 'data/club';
+import type { Club as ClubType } from '../../data/users/type';
+
+type State = {
+  clubs: ClubType[],
+  loading: boolean,
+}
 
 class Club extends Component {
-  state = {
+  state: State = {
     clubs: [],
     loading: false,
-  };
+  }
 
   componentDidMount() {
     this.getClubs();
@@ -38,7 +43,7 @@ class Club extends Component {
         clubs={this.state.clubs}
         addClub={this.addClub} />
     );
-  };
-};
+  }
+}
 
 export default Club;

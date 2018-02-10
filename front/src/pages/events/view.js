@@ -11,15 +11,12 @@ import {
   Filler,
   FluidContent,
   Header,
-  SearchBar,
   Text,
   Title,
   ScrollToTopOnMount,
 } from '../../components/common';
 
-
 import Button from 'material-ui/Button';
-
 
 import { NavLink } from 'react-router-dom';
 
@@ -34,8 +31,6 @@ const EventsList = styled.ul`
   padding: 0;
   margin: 20px 0;
 `;
-
-
 
 export default class Events extends Component {
   render() {
@@ -58,8 +53,8 @@ export default class Events extends Component {
               <Title invert fontSize={1.3}>Evènements {this.props.eventsFilter === 'next' ? 'à venir' : 'passés'}</Title>
             </Box>
             <Box flex="0 0 auto" ml="auto">
-              <Button color="accent" onClick={this.props.onModifyFilter('next')}>A venir</Button>
-              <Button color="accent" onClick={this.props.onModifyFilter('past')}>Passés</Button>
+              <Button color="secondary" onClick={this.props.onModifyFilter('next')}>A venir</Button>
+              <Button color="secondary" onClick={this.props.onModifyFilter('past')}>Passés</Button>
             </Box>
             <Box flex="0 0 auto" ml="10px">
               <Button color="primary" component={NavLink} to="/evenements/calendrier">Calendrier</Button>
@@ -82,7 +77,7 @@ export default class Events extends Component {
                         onEdit={this.props.editEvent}
                         onDelete={this.props.deleteEvent} />
                     </div>
-                  )
+                  );
                 })
               }
             </Loader>
@@ -101,5 +96,5 @@ export default class Events extends Component {
         </FluidContent>
       </div>
     );
-  };
-};
+  }
+}

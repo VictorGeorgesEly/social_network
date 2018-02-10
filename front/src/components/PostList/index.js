@@ -15,6 +15,9 @@ import EditButton from './EditButton';
 import PostTitleView from './PostTitleView';
 
 import * as postData from 'data/post';
+import * as utils from '../../data/util';
+import type { Post as PostType } from '../../data/post/type';
+import type { Media as MediaType } from '../../data/media/type';
 
 import ModifyPostModal from './ModifyPostModal';
 import FullScreenView from '../FullScreen/View';
@@ -29,7 +32,7 @@ import GazettePost from './Posts/GazettePost';
 import EventPost from './Posts/EventPost';
 
 import { Text } from '../common';
-import IconButton from 'material-ui/IconButton/IconButton';
+import Popup from '../Popup';
 
 const PostList = styled.ul`
   padding: 0;
@@ -48,16 +51,6 @@ export const Post = styled.li`
     flex-direction: column;
   }
 `;
-
-// const PostContent = styled.div`
-//   height: ${props => props.fb ? 'auto' : '250px'};
-//   position: relative;
-//   ${props => props.fb && 'background: black;'}
-
-//   @media (max-width: 40em) {
-//     height: ${props => props.fb ? 'auto' : '300px'};
-//   }
-// `;
 
 export const PostText = Box.extend`
   padding: 20px;
@@ -79,18 +72,28 @@ export const PostActions = styled.div`
   align-items: center;
 `;
 
-export class PostTextView extends Component {
+type PostTextViewProps = {
+  refresh: () => mixed,
+  modify: (post: PostType) => mixed,
+  deletePost: (post: PostType) => mixed,
+  post: PostType,
+  preview: boolean,
+  canPin: boolean,
+  w: number[],
+};
+
+export class PostTextView extends Component<PostTextViewProps> {
 
   toggleLike = () => {
     postData.toggleLikePost(this.props.post.id);
-  };
+  }
 
   showLikes = () => {
     return postData.getLikes('post', this.props.post.id);
   }
 
   render() {
-    const { post, refresh, preview, modify, canPin } = this.props;
+    const { post, refresh, preview, modify, canPin, deletePost } = this.props;
     return (
       <PostText w={this.props.w}>
         <PostTitleView post={post} />
@@ -99,10 +102,11 @@ export class PostTextView extends Component {
 
           {
             !preview &&
-            <Button dense color="accent" component={NavLink} to={`/post/${post.id}`}>
+            <Button size="small" color="secondary" component={NavLink} to={`/post/${post.id}`}>
               {post.nbComments} <ForumIcon style={{ marginLeft: 5 }} />
             </Button>
           }
+
           {
             post.hasWriteAccess &&
             <Box ml="5px">
@@ -110,7 +114,8 @@ export class PostTextView extends Component {
                 post={post}
                 refresh={refresh}
                 canPin={canPin}
-                modify={modify} />
+                modify={modify}
+                delete={deletePost} />
             </Box>
           }
           <Box ml="auto">
@@ -123,25 +128,34 @@ export class PostTextView extends Component {
         </PostActions>
       </PostText>
     );
-  };
+  }
+}
+
+type TextContentProps = {
+  preview: boolean,
+  content: string,
 };
 
-export function PostTextContent(props) {
+export function PostTextContent(props: TextContentProps) {
   const text = props.preview ? props.content
     .slice(0, 200)
     .split('\n')
     .slice(0, 3) : props.content.split('\n');
   if (props.preview && (props.content.length > 200 || props.content.slice(0, 200).split('\n').length > 3)) {
-    text[text.length - 1] += '...'
+    text[text.length - 1] += '...';
   }
   return (
     <div>
-      {text.map((par, i) => <Text key={i} mb={1} color="#555">{par}</Text>)}
+      {text.map((par, i) => <Text key={i} mb={1} color="#555">{utils.parseText(par)}</Text>)}
     </div>
   );
+}
+
+type PostViewProps = {
+  post: PostType,
 };
 
-export function PostView(props) {
+export function PostView(props: PostViewProps) {
   if (props.post.media) {
     switch (props.post.media.mediaType) {
       case 'poll':
@@ -160,33 +174,67 @@ export function PostView(props) {
         return <GazettePost { ...props} />;
       default:
         break;
-    };
+    }
   } else {
     return <TextPost {...props} />;
   }
 }
 
-export default class PostListView extends React.Component {
+type PostListViewProps = {
+  refreshPosts: (action?: string) => mixed,
+  posts: PostType[],
+  canPin: boolean,
+};
+
+type PostListViewState = {
+  postSelected: ?PostType,
+  media: ?MediaType,
+  modifyEnable: boolean,
+  fullscreenOpen: boolean,
+  deleteEnabled: boolean,
+};
+
+export default class PostListView extends React.Component<PostListViewProps, PostListViewState> {
   state = {
-    postModified: null,
+    postSelected: null,
+    media: null,
     modifyEnable: false,
     fullscreenOpen: false,
-    media: null,
+    deleteEnabled: false,
   };
 
-  modifyPost = (postModified) => {
-    this.setState({ postModified, modifyEnable: true })
+  modifyPost = (postSelected: PostType) => {
+    this.setState({ postSelected, modifyEnable: true });
   };
 
   requestClose = () => {
     this.setState({ modifyEnable: false });
   };
 
-  setFullScreen = (fullscreenOpen, media) => {
+  setFullScreen = (fullscreenOpen: boolean, media: ?MediaType) => {
     if (media) {
       this.setState({ media });
     }
     this.setState({ fullscreenOpen });
+  }
+
+  deletePost = (post: PostType) => {
+    this.setState({
+      deleteEnabled: true,
+      postSelected: post,
+    });
+  }
+
+  deleteResponse = (ok: boolean) => {
+    if (ok) {
+      postData.deletePost(this.state.postSelected.id).then(res => {
+        this.props.refreshPosts('delete');
+      });
+    }
+    this.setState({
+      deleteEnabled: false,
+      postSelected: null
+    });
   }
 
   render() {
@@ -202,32 +250,60 @@ export default class PostListView extends React.Component {
                 post={p}
                 list={true}
                 invert={i % 2 === 1}
-                canPin={props.canPin}
                 openFullScreen={this.setFullScreen}
-                refresh={props.refreshPosts}
-                modify={this.modifyPost}
+                textView={(size) =>
+                  <PostTextView
+                    post={p}
+                    refresh={props.refreshPosts}
+                    w={size}
+                    canPin={props.canPin}
+                    preview={false}
+                    modify={this.modifyPost}
+                    deletePost={this.deletePost}
+                  />
+                }
               />
             );
           })
         }
         <ModifyPostModal
-          post={this.state.postModified}
+          post={this.state.postSelected}
           open={this.state.modifyEnable}
           refresh={props.refreshPosts}
-          modifyPost={this.modifyPost}
           requestClose={this.requestClose} />
-        <FullScreenView
-          matcher
-          internalRefresh
-          visible={this.state.fullscreenOpen}
-          image={this.state.media && this.state.media.fullSizeUrl}
-          data={this.state.media}
-          onEscKey={() => this.setFullScreen(false)} />
+
+        {
+          this.state.media && this.state.media.mediaType === 'image' &&
+          <FullScreenView
+            matcher
+            internalRefresh
+            visible={this.state.fullscreenOpen}
+            image={this.state.media.fullSizeUrl}
+            imageOriginal={this.state.media.originalUrl}
+            data={this.state.media}
+            onEscKey={() => this.setFullScreen(false)} />
+        }
+        <Popup
+          title="Suppression"
+          description="Voulez vous supprimer cette publication ?"
+          open={this.state.deleteEnabled}
+          onRespond={this.deleteResponse}
+        />
       </PostList>
     );
-  };
-};
+  }
+}
 
+
+// const PostContent = styled.div`
+//   height: ${props => props.fb ? 'auto' : '250px'};
+//   position: relative;
+//   ${props => props.fb && 'background: black;'}
+
+//   @media (max-width: 40em) {
+//     height: ${props => props.fb ? 'auto' : '300px'};
+//   }
+// `;
 
 //     case 'videoEmbed':
 //       return (

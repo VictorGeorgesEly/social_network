@@ -18,10 +18,10 @@ class Event extends Component {
 
   componentDidMount() {
     this.fetchEvents();
-  };
+  }
 
   fetchEvents() {
-    this.setState({ isLoading: true })
+    this.setState({ isLoading: true });
     eventData.getEvents().then(res => {
       this.setState({ events: res.data, isLoading: false });
     });
@@ -33,8 +33,10 @@ class Event extends Component {
 
   filterEvents = (events) => {
     const now = new Date().getTime();
-    return events.filter(e =>
-      this.state.eventsFilter === 'past' ? e.date < now : e.date > now);
+    return events
+      .filter(e =>
+      this.state.eventsFilter === 'past' ? e.date < now : e.date > now)
+      .sort((a, b) => a.date > b.date ? 1 : -1);
   };
 
   editEvent = (event) => {
@@ -45,7 +47,7 @@ class Event extends Component {
     eventData.updateEvent(event.id, event).then(res => {
       this.fetchEvents();
       this.closeEditEvent();
-    })
+    });
   }
 
   closeEditEvent = () => {
@@ -60,7 +62,7 @@ class Event extends Component {
     if (ok) {
       eventData.deleteEvent(this.state.selectedEvent.id).then(res => {
         this.fetchEvents();
-      })
+      });
     }
     this.setState({
       popupDelete: false,
@@ -85,7 +87,7 @@ class Event extends Component {
         deleteEvent={this.deleteEvent}
         eventsFilter={this.state.eventsFilter} />
     );
-  };
-};
+  }
+}
 
 export default Event;

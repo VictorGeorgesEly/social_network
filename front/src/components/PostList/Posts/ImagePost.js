@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 
 import { Box } from 'grid-styled';
 
-import { Post, PostTextView } from 'components/PostList';
+import { Post } from 'components/PostList';
 
 import { BgImage, Paper } from 'components/common';
 
@@ -19,7 +19,7 @@ class ImagePost extends Component {
             <BgImage
               onClick={() => {
                 if (!props.preview) {
-                  props.openFullScreen(true, props.post.media)
+                  props.openFullScreen(true, props.post.media);
                 }
               }}
               style={{ cursor: !props.preview ? 'pointer' : 'normal' }}
@@ -29,17 +29,10 @@ class ImagePost extends Component {
               mh={props.preview ? '400px' : '250px'} />
           </Paper>
         </Box>
-        <PostTextView
-          post={props.post}
-          refresh={props.refresh}
-          w={size}
-          canPin={props.canPin}
-          preview={props.preview}
-          modify={props.modify}
-        />
+        {props.textView(size)}
       </Post>
     );
-  };
-};
+  }
+}
 
 export default ImagePost;

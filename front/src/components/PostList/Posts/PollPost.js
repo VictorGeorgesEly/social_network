@@ -6,7 +6,7 @@ import { Box } from 'grid-styled';
 
 import Poll from 'components/Poll';
 
-import { Post, PostTextView } from 'components/PostList';
+import { Post } from 'components/PostList';
 
 class PollPost extends Component {
   render() {
@@ -17,16 +17,10 @@ class PollPost extends Component {
         <Box w={size}>
           <Poll data={props.post.media} />
         </Box>
-        <PostTextView
-          post={props.post}
-          preview={props.preview}
-          refresh={props.refresh}
-          modify={props.modify}
-          canPin={props.canPin}
-          w={size} />
+        {props.textView(size)}
       </Post>
     );
-  };
-};
+  }
+}
 
 export default PollPost;

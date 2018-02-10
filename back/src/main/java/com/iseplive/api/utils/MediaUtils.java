@@ -2,7 +2,6 @@ package com.iseplive.api.utils;
 
 import com.iseplive.api.exceptions.FileException;
 import com.iseplive.api.exceptions.IllegalArgumentException;
-import com.iseplive.api.services.ImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +16,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,7 +27,7 @@ import java.util.Date;
 @Service
 public class MediaUtils {
 
-  private final Logger LOG = LoggerFactory.getLogger(ImageService.class);
+  private final Logger LOG = LoggerFactory.getLogger(MediaUtils.class);
 
   @Value("${storage.url}")
   private String baseUrl;
@@ -44,30 +42,30 @@ public class MediaUtils {
   }
 
   public String resolvePath(String dir, String name, boolean thumb, Date date) {
-    return resolvePath(dir, pathGroupByDate(date, name), thumb);
+    return resolvePath(pathGroupByDate(date, dir), name, thumb);
   }
 
   public String resolvePath(String dir, String name, boolean thumb, String studentId) {
-    return resolvePath(dir, pathGroupByStudentId(studentId, name), thumb);
+    return resolvePath(pathGroupByStudentId(studentId, dir), name, thumb);
   }
 
-  private String pathGroupByStudentId(String studentId, String name) {
+  private String pathGroupByStudentId(String studentId, String dir) {
     return String.format(
       "%s/%s",
-      studentId.substring(0, studentId.length() - 2),
-      name
+      dir,
+      studentId.substring(0, studentId.length() - 2)
     );
   }
 
-  private String pathGroupByDate(Date date, String fileName) {
+  private String pathGroupByDate(Date date, String dir) {
     Calendar c = Calendar.getInstance();
     c.setTime(date);
     return String.format(
-      "%d/%d/%d/%s",
+      "%s/%d/%d/%d",
+      dir,
       c.get(Calendar.YEAR),
       c.get(Calendar.MONTH) + 1,
-      c.get(Calendar.DATE),
-      fileName
+      c.get(Calendar.DATE)
     );
   }
 
@@ -190,9 +188,9 @@ public class MediaUtils {
   }
 
   private String sanitizePath(String name) {
-    name = Normalizer.normalize(name, Normalizer.Form.NFD);
-    name = name.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
-    return name.replaceAll(" ", "-");
+    return name
+      .replaceAll("[^a-zA-Z0-9\\s]", "")
+      .replaceAll(" ", "-");
   }
 
   public String getPath(String url) {

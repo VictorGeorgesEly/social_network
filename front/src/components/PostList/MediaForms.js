@@ -18,6 +18,8 @@ import styled from 'styled-components';
 
 import DatePicker from '../../components/DatePicker';
 
+import * as moment from 'moment';
+
 const AddButton = styled(Button) `
   margin-top: 10px;
 `;
@@ -49,15 +51,16 @@ export function MediaCreator(props) {
         {props.children}
       </MediaCreatorWrap>
     );
-  };
+  }
   return null;
-};
+}
 
 export class PollForm extends Component {
   state = {
     title: '',
     answers: ['', ''],
     multiAnswers: false,
+    duration: 24,
     endDate: new Date().getTime() + 24 * 3600 * 1000,
   };
 
@@ -81,13 +84,19 @@ export class PollForm extends Component {
   };
 
   changeDuration = (event) => {
-    const dur = +event.target.value;
+    const dur = parseInt(event.target.value, 10);
+    if (isNaN(dur))
+      return;
+    if (dur < 0) return;
     const now = new Date().getTime();
     this.props.update({
       ...this.state,
       endDate: now + (dur * 3600 * 1000)
     });
-    this.setState({ endDate: now + (dur * 3600 * 1000) });
+    this.setState({
+      endDate: now + (dur * 3600 * 1000),
+      duration: dur,
+    });
   };
 
   changeMultiAnswer = () => {
@@ -123,13 +132,19 @@ export class PollForm extends Component {
                   </IconButton>
                 }
               </Box>
-            </Flex>
+            </Flex>;
           })
         }
-        <AddButton color="accent" onClick={this.addAnswer}>Ajouter une réponse</AddButton>
+        <AddButton color="secondary" onClick={this.addAnswer}>Ajouter une réponse</AddButton>
         <Flex wrap>
           <Box width={1} mt={2}>
-            <TextField fullWidth label="Durée (h)" onChange={this.changeDuration} />
+            <TextField
+              type="number"
+              fullWidth
+              label="Durée (h)"
+              value={this.state.duration}
+              onChange={this.changeDuration}
+              helperText={`Fin le ${moment(this.state.endDate).format('Do MMMM YYYY HH:mm')}`} />
           </Box>
           <Box width={1}>
             <FormControlLabel
@@ -145,8 +160,8 @@ export class PollForm extends Component {
         </Flex>
       </FormWrapper>
     );
-  };
-};
+  }
+}
 
 const PreviewImage = styled.img`
   max-width: 100%;
@@ -189,8 +204,8 @@ export class ImageForm extends Component {
           onFile={this.handleImageSelect} >Choisir une image</FileUpload>
       </div>
     );
-  };
-};
+  }
+}
 
 export class VideoEmbedForm extends Component {
   state = {
@@ -231,12 +246,12 @@ export class VideoEmbedForm extends Component {
     return (
       <div>
         <div>
-          <Button color="accent" onClick={this.openMenu}>Choisir Type</Button> {this.state.type === 'YOUTUBE' ? 'Youtube' : 'Facebook'}
+          <Button color="secondary" onClick={this.openMenu}>Choisir Type</Button> {this.state.type === 'YOUTUBE' ? 'Youtube' : 'Facebook'}
         </div>
         <Menu
           anchorEl={this.state.anchorEl}
           open={this.state.openTypeMenu}
-          onRequestClose={this.closeMenu}>
+          onClose={this.closeMenu}>
           <MenuItem
             onClick={() => this.changeType('YOUTUBE')}
             selected={this.state.type === 'YOUTUBE'}>Youtube</MenuItem>
@@ -247,8 +262,8 @@ export class VideoEmbedForm extends Component {
         <TextField label="ID de la Video" fullWidth onChange={this.changeUrl} />
       </div>
     );
-  };
-};
+  }
+}
 
 export class VideoForm extends Component {
 
@@ -257,13 +272,13 @@ export class VideoForm extends Component {
     video: null,
   };
 
-  handleVideoSelect = (event) => {
-    const video = event.target.files[0];
+  handleVideoSelect = (files) => {
+    const video = files[0];
     this.setState({ video });
     if (this.state.name === '') {
       this.props.update({ ...this.state, video, name: video.name });
       return this.setState({ name: video.name });
-    };
+    }
     this.props.update({ ...this.state, video });
   };
 
@@ -282,8 +297,8 @@ export class VideoForm extends Component {
         <FileUpload accept={['mp4', 'mov']} onFile={this.handleVideoSelect} >Choisir une video</FileUpload>
       </div>
     );
-  };
-};
+  }
+}
 
 export class GalleryForm extends Component {
   state = {
@@ -303,7 +318,7 @@ export class GalleryForm extends Component {
   update(state) {
     this.setState({ ...state });
     this.props.update({ ...this.state, ...state });
-  };
+  }
 
   render() {
     const { images } = this.state;
@@ -320,9 +335,8 @@ export class GalleryForm extends Component {
           onFile={this.handleFileSelect} >Ajouter des images</FileUpload>
       </div>
     );
-  };
-};
-
+  }
+}
 
 export class DocumentForm extends Component {
   state = {
@@ -342,7 +356,7 @@ export class DocumentForm extends Component {
   update(state) {
     this.setState({ ...state });
     this.props.update({ ...this.state, ...state });
-  };
+  }
 
   render() {
     const { document } = this.state;
@@ -355,8 +369,8 @@ export class DocumentForm extends Component {
         <FileUpload multiple onFile={this.handleFileSelect}>Ajouter un fichier</FileUpload>
       </div>
     );
-  };
-};
+  }
+}
 
 export class GazetteForm extends Component {
   state = {
@@ -376,7 +390,7 @@ export class GazetteForm extends Component {
   update(state) {
     this.setState({ ...state });
     this.props.update({ ...this.state, ...state });
-  };
+  }
 
   render() {
     const { file } = this.state;
@@ -389,8 +403,8 @@ export class GazetteForm extends Component {
         <FileUpload accept={['pdf']} onFile={this.handleFileSelect}>Ajouter un fichier</FileUpload>
       </div>
     );
-  };
-};
+  }
+}
 
 export class EventForm extends Component {
   state = {
@@ -405,8 +419,8 @@ export class EventForm extends Component {
   componentDidMount() {
     if (this.props.post) {
       this.setState({ ...this.props.post.media });
-    };
-  };
+    }
+  }
 
   handleFileSelect = (files) => {
     const reader = new FileReader();
@@ -429,7 +443,7 @@ export class EventForm extends Component {
   update(state) {
     this.setState({ ...state });
     this.props.update({ ...this.state, ...state });
-  };
+  }
 
   handleChangeDate = (date: Date) => {
     this.update({ date });
@@ -468,5 +482,5 @@ export class EventForm extends Component {
         </div>
       </div>
     );
-  };
-};
+  }
+}

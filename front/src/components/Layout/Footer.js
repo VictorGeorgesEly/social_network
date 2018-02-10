@@ -1,3 +1,5 @@
+// @flow
+
 import React from 'react';
 
 import styled from 'styled-components';
@@ -9,7 +11,6 @@ import {
   FluidContent,
 } from '../common';
 import { MAIN_COLOR, SECONDARY_COLOR } from '../../colors';
-
 
 const SocialBox = styled.div`
   width: 100%;
@@ -58,7 +59,6 @@ const Footer = styled.footer`
   }
 `;
 
-
 export default class FooterView extends React.Component {
   render() {
     return (
@@ -70,7 +70,7 @@ export default class FooterView extends React.Component {
                 1, 1, 2 / 6
               ]} p={2}>
                 <h4>CONTACT</h4>
-                <p>28, rue Notre Dame des Champs</p>
+                <p>28, rue Notre-Dame-des-Champs</p>
                 <p>75 006 PARIS</p>
                 <p>iseplive@gmail.com</p>
               </Box>
@@ -94,7 +94,7 @@ export default class FooterView extends React.Component {
                       </a>
                     </Box>
                     <Box width={1 / 4} p={1}>
-                      <a href="" target="_blank" rel="noopener noreferrer">
+                      <a href="https://www.snapchat.com/add/iseplive" target="_blank" rel="noopener noreferrer">
                         <img src="/img/svg/snapchat.svg" alt="Snapchat logo" />
                       </a>
                     </Box>
@@ -134,21 +134,21 @@ export default class FooterView extends React.Component {
         <LinksBar>
           <div>
             <span>© {new Date().getFullYear()} ISEPLive</span>
-            <Button color="contrast" style={{ marginLeft: 10 }} component={NavLink} to="/aide" activeStyle={{
+            <Button style={{ marginLeft: 10 }} component={NavLink} to="/aide" activeStyle={{
               color: MAIN_COLOR
             }}>Aide</Button>
-            <Button color="contrast" component={NavLink} to="/mentions-legales" activeStyle={{
+            <Button component={NavLink} to="/mentions-legales" activeStyle={{
               color: MAIN_COLOR
             }}>Mentions Légales</Button>
-            <Button color="contrast" component={NavLink} to="/convention-utilisation" activeStyle={{
+            <Button component={NavLink} to="/convention-utilisation" activeStyle={{
               color: MAIN_COLOR
             }}>Convention d'utilisation</Button>
-            <Button color="contrast" component={NavLink} to="/contact" activeStyle={{
+            <Button component={NavLink} to="/contact" activeStyle={{
               color: MAIN_COLOR
             }}>Contact</Button>
           </div>
         </LinksBar>
       </div>
-    )
+    );
   }
 }

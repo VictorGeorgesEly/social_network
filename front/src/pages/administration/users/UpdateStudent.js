@@ -5,7 +5,8 @@ import { Flex, Box } from "grid-styled";
 
 import Button from 'material-ui/Button';
 import TextField from 'material-ui/TextField';
-import Delete from 'material-ui-icons/Delete';
+
+import ArchiveIcon from 'material-ui-icons/Archive';
 import Save from 'material-ui-icons/Save';
 import ExpandMoreIcon from 'material-ui-icons/ExpandMore';
 
@@ -23,6 +24,8 @@ import DatePicker from '../../../components/DatePicker';
 import { Title, Text, ProfileImage } from "../../../components/common";
 import Popup from '../../../components/Popup';
 
+import { Link } from 'react-router-dom';
+
 import * as userData from '../../../data/users/student';
 import * as authData from '../../../data/auth';
 import * as rolesKey from '../../../constants';
@@ -30,15 +33,34 @@ import * as rolesKey from '../../../constants';
 import { MAIN_COLOR } from '../../../colors';
 
 import { sendAlert } from '../../../components/Alert';
+import type {
+  Role as RoleType,
+    Student as StudentType
+} from '../../../data/users/type';
 
-export default class UpdateStudent extends React.Component {
+type UpdateProps = {
+  selected: StudentType,
+  refreshTable: () => mixed,
+  selectRow: (student: ?StudentType) => mixed,
+  onChangeField: (name: string, value: string) => mixed,
+};
+
+type UpdateState = {
+  roles: RoleType[],
+  userRoles: number[],
+  file: ?File,
+  imagePreview: ?string,
+  openArchivePopup: boolean,
+};
+
+export default class UpdateStudent extends React.Component<UpdateProps, UpdateState> {
 
   state = {
     roles: [],
     userRoles: [],
     file: null,
     imagePreview: null,
-    openDeletePopup: false,
+    openArchivePopup: false,
   }
 
   componentDidMount() {
@@ -46,46 +68,46 @@ export default class UpdateStudent extends React.Component {
     this.loadStudentRoles(this.props.selected.id);
   }
 
-  componentWillReceiveProps(props) {
+  componentWillReceiveProps(props: UpdateProps) {
     if (props.selected && props.selected.id !== this.props.selected.id) {
       this.loadStudentRoles(props.selected.id);
     }
   }
 
-  onChangeField = name => e => {
-    this.props.onChangeField(name, e.target.value);
+  onChangeField = (name: string) => (e: SyntheticEvent<HTMLInputElement>) => {
+    this.props.onChangeField(name, e.currentTarget.value);
   }
 
-  handleSelectRoles = (e) => {
+  handleSelectRoles = (e: any) => {
     this.setState({ userRoles: e.target.value });
   }
 
   loadAllRoles() {
     authData.getAllRoles().then(res => {
       this.setState({ roles: res.data });
-    })
+    });
   }
 
-  loadStudentRoles(id) {
+  loadStudentRoles(id: number) {
     userData.getStudentRoles(id).then(res => {
       this.setState({ userRoles: res.data.map(r => r.id) });
-    })
+    });
   }
 
   getRoleName(role: string) {
     switch (role) {
       case rolesKey.ADMIN:
-        return "Super Admin"
+        return "Super Admin";
       case rolesKey.CLUB_MANAGER:
-        return "Gestion assoc"
+        return "Gestion associations";
       case rolesKey.EVENT_MANAGER:
-        return "Gestion évenements"
+        return "Gestion évenements";
       case rolesKey.POST_MANAGER:
-        return "Gestion posts"
+        return "Gestion posts";
       case rolesKey.USER_MANAGER:
-        return "Gestion utilisateurs"
+        return "Gestion utilisateurs";
       case rolesKey.STUDENT:
-        return "Eleve"
+        return "Eleve";
 
       default:
         return role;
@@ -98,16 +120,16 @@ export default class UpdateStudent extends React.Component {
       ...this.props.selected,
       roles: this.state.userRoles,
       file: this.state.file,
-    }
+    };
 
     userData.updateStudentFull(data).then(res => {
       this.props.refreshTable();
       this.props.selectRow(res.data);
       sendAlert("Etudiant mis à jour");
-    })
+    });
   }
 
-  changeFile = (file) => {
+  changeFile = (file: File) => {
     const reader = new FileReader();
 
     reader.onloadend = () => {
@@ -120,29 +142,43 @@ export default class UpdateStudent extends React.Component {
     reader.readAsDataURL(file);
   }
 
-  deleteAccepted = (ok) => {
+  archiveAccepted = (ok: boolean) => {
     if (ok) {
-      userData.deleteStudent(this.props.selected.id).then(res => {
+      userData.toggleArchiveStudent(this.props.selected.id).then(res => {
         this.props.refreshTable();
         this.props.selectRow(null);
-        sendAlert("Etudiant supprimé");
+        sendAlert("Etudiant Archivé");
       });
     }
-    this.setState({ openDeletePopup: false });
+    this.setState({ openArchivePopup: false });
   }
 
   render() {
     const { selected } = this.props;
-    const { roles, userRoles, imagePreview, file, openDeletePopup } = this.state;
+    const { roles, userRoles, imagePreview, file, openArchivePopup } = this.state;
     return (
       <div>
-        <Title fontSize={1.1}>{selected.firstname} {selected.lastname}</Title>
+        <Link to={`/annuaire/${selected.id}`}>
+          <Title fontSize={1.1}>{selected.firstname} {selected.lastname}</Title>
+        </Link>
         <ExpansionPanel defaultExpanded>
           <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
             <Text>Infos</Text>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
             <div>
+              {
+                selected.archived &&
+                <Flex align="center">
+                  <Box p={1}>
+                    <Text fs="13px">Cet étudiant est archivé </Text>
+                  </Box>
+                  <Box ml="auto">
+                    <Button size="small" style={{ fontSize: 12 }}
+                      onClick={() => this.archiveAccepted(true)}>Annuler</Button>
+                  </Box>
+                </Flex>
+              }
               <TextField
                 margin="normal"
                 label="Prénom"
@@ -178,13 +214,18 @@ export default class UpdateStudent extends React.Component {
                   }
                   {
                     file &&
-                    <Button raised onClick={() => this.setState({ file: null, imagePreview: null })}>
+                    <Button
+                      raised
+                      onClick={() =>
+                        this.setState({ file: null, imagePreview: null })
+                      }>
                       Supprimer
                     </Button>
                   }
                 </Box>
               </Flex>
               <TextField
+                type="number"
                 margin="normal"
                 label="Promotion"
                 value={selected.promo || ''}
@@ -194,8 +235,8 @@ export default class UpdateStudent extends React.Component {
                 margin="normal"
                 label="Numéro ISEP"
                 value={selected.studentId || ''}
-                fullWidth
-                onChange={this.onChangeField('studentId')} />
+                disabled
+                fullWidth />
               <TextField
                 margin="normal"
                 label="Email"
@@ -300,15 +341,24 @@ export default class UpdateStudent extends React.Component {
           <Button fab color="primary" style={{ margin: 5 }} onClick={this.updateUser}>
             <Save />
           </Button>
-          <Button fab color="accent" style={{ margin: 5 }} >
-            <Delete />
-          </Button>
+          {
+            !selected.archived &&
+            <Button
+              fab
+              color="secondary"
+              style={{ margin: 5 }}
+              onClick={() => this.setState({
+                openArchivePopup: true,
+              })} >
+              <ArchiveIcon />
+            </Button>
+          }
         </div>
         <Popup
-          title="Suppression"
-          description="Voulez vous supprimer cette étudiant ?"
-          open={openDeletePopup}
-          onRespond={this.deleteAccepted}
+          title="Archivage"
+          description="Voulez vous archiver cet étudiant ?"
+          open={openArchivePopup}
+          onRespond={this.archiveAccepted}
         />
       </div>
     );

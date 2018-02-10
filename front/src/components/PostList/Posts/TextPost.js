@@ -2,23 +2,17 @@
 
 import React, { Component } from 'react';
 
-import { Post, PostTextView } from 'components/PostList';
+import { Post } from 'components/PostList';
 
 class TextPost extends Component {
   render() {
     const props = this.props;
     return (
       <Post invert={props.invert}>
-        <PostTextView
-          post={props.post}
-          w={[1]}
-          preview={props.preview}
-          refresh={props.refresh}
-          canPin={props.canPin}
-          modify={props.modify} />
+        {props.textView(1)}
       </Post>
     );
-  };
-};
+  }
+}
 
 export default TextPost;

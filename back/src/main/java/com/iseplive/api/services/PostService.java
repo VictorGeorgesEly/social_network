@@ -1,6 +1,7 @@
 package com.iseplive.api.services;
 
 import com.iseplive.api.conf.jwt.TokenPayload;
+import com.iseplive.api.constants.AuthorTypes;
 import com.iseplive.api.constants.PublishStateEnum;
 import com.iseplive.api.constants.Roles;
 import com.iseplive.api.dao.media.MediaRepository;
@@ -13,11 +14,12 @@ import com.iseplive.api.dto.view.PostView;
 import com.iseplive.api.entity.Comment;
 import com.iseplive.api.entity.Post;
 import com.iseplive.api.entity.club.Club;
-import com.iseplive.api.entity.media.Media;
+import com.iseplive.api.entity.media.*;
 import com.iseplive.api.entity.user.Author;
 import com.iseplive.api.entity.user.Student;
 import com.iseplive.api.exceptions.AuthException;
 import com.iseplive.api.exceptions.IllegalArgumentException;
+import com.iseplive.api.utils.MediaUtils;
 import com.iseplive.api.websocket.PostMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -66,7 +68,13 @@ public class PostService {
   ClubService clubService;
 
   @Autowired
+  MediaService mediaService;
+
+  @Autowired
   PostMessageService postMessageService;
+
+  @Autowired
+  MediaUtils mediaUtils;
 
   private final int POSTS_PER_PAGE = 10;
 
@@ -101,14 +109,20 @@ public class PostService {
   public Post createPost(TokenPayload auth, PostDTO postDTO) {
     Post post = postFactory.dtoToEntity(postDTO);
     post.setAuthor(authorRepository.findOne(postDTO.getAuthorId()));
-    if (post.getAuthor().getAuthorType().equals("student") && !auth.getId().equals(postDTO.getAuthorId())) {
+
+    // if creator is a student but is has wrong author id on the post
+    if (post.getAuthor().getAuthorType().equals(AuthorTypes.STUDENT) && !auth.getId().equals(postDTO.getAuthorId())) {
       throw new AuthException("not allowed to create this post");
     }
+
+    // if creator is not an ADMIN or POST_MANAGER
     if (!auth.getRoles().contains(Roles.ADMIN) && !auth.getRoles().contains(Roles.POST_MANAGER)) {
-      if (post.getAuthor().getAuthorType().equals("club") && !auth.getClubsAdmin().contains(postDTO.getAuthorId())) {
+      // if creator is not a club an is not part of the admins (able to post)
+      if (post.getAuthor().getAuthorType().equals(AuthorTypes.CLUB) && !auth.getClubsAdmin().contains(postDTO.getAuthorId())) {
         throw new AuthException("not allowed to create this post");
       }
     }
+
     post.setCreationDate(new Date());
     post.setPublishState(PublishStateEnum.WAITING);
 
@@ -130,7 +144,39 @@ public class PostService {
     if (!hasRightOnPost(auth, post)) {
       throw new AuthException("you cannot delete this post");
     }
-    // TODO: delete the ressource associated to the media (stored on disk)
+
+    // delete media files on disk for each media type
+
+    if (post.getMedia() instanceof Gallery) {
+      Gallery gallery = (Gallery) post.getMedia();
+      gallery.getImages().forEach(img -> mediaService.deleteImageFile(img));
+    }
+
+    if (post.getMedia() instanceof Image) {
+      Image image = (Image) post.getMedia();
+      mediaService.deleteImageFile(image);
+    }
+
+    if (post.getMedia() instanceof Event) {
+      Event event = (Event) post.getMedia();
+      mediaUtils.removeIfExistPublic(event.getImageUrl());
+    }
+
+    if (post.getMedia() instanceof Document) {
+      Document document = (Document) post.getMedia();
+      mediaUtils.removeIfExistPublic(document.getPath());
+    }
+
+    if (post.getMedia() instanceof Gazette) {
+      Gazette gazette = (Gazette) post.getMedia();
+      mediaUtils.removeIfExistPublic(gazette.getUrl());
+    }
+
+    if (post.getMedia() instanceof Video) {
+      Video video = (Video) post.getMedia();
+      mediaUtils.removeIfExistPublic(video.getUrl());
+    }
+
     postRepository.delete(postId);
   }
 
@@ -272,11 +318,22 @@ public class PostService {
   }
 
   private boolean hasRightOnPost(TokenPayload auth, Post post) {
-    if (!auth.getRoles().contains(Roles.ADMIN) || !auth.getRoles().contains(Roles.POST_MANAGER)) {
+    if (!auth.getRoles().contains(Roles.ADMIN) && !auth.getRoles().contains(Roles.POST_MANAGER)) {
       if (!post.getAuthor().getId().equals(auth.getId()) && !auth.getClubsAdmin().contains(post.getAuthor().getId())) {
         return false;
       }
     }
     return true;
+  }
+
+  public void deleteComment(Long comId, Long id) {
+    Comment comment = commentRepository.findOne(comId);
+    if (comment == null) {
+      throw new IllegalArgumentException("could not find this comment");
+    }
+    if (!comment.getStudent().getId().equals(id)) {
+      throw new AuthException("you cannot delete this comment");
+    }
+    commentRepository.delete(comment);
   }
 }

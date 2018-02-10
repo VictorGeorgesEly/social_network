@@ -4,14 +4,13 @@ import React, { Component } from 'react';
 import { Flex, Box } from 'grid-styled';
 import { Link } from 'react-router-dom';
 
-import { Post, PostTextView } from 'components/PostList';
+import { Post } from 'components/PostList';
 
 import {
   Image,
   Paper,
   Title,
 } from 'components/common';
-
 
 class GalleryPost extends Component {
 
@@ -21,15 +20,17 @@ class GalleryPost extends Component {
     const imageSize = props.preview ? [1 / 2, 1 / 4, 1 / 6] : [1 / 3];
     const gallery = props.post.media;
     const galleryOrder = props.preview ? 2 : 1;
-    const images = props.preview ? gallery.images : gallery.images.slice(0, 3);
+    const images = props.preview ? gallery.previewImages : gallery.previewImages.slice(0, 6);
     return (
       <Post invert={props.invert}>
         <Box w={size} order={galleryOrder} >
           <Paper style={{ height: '100%', padding: '2em' }}>
             <div>
-              <Title invert fontSize={1}>GALLERIE</Title>
+              <Title invert fontSize={1}>GALERIE</Title>
             </div>
-            <Title>{gallery.name}</Title>
+            <Link to={`/gallery/${gallery.id}`}>
+              <Title>{gallery.name}</Title>
+            </Link>
             <Flex wrap>
               {
                 images.map((img, index) => {
@@ -47,19 +48,33 @@ class GalleryPost extends Component {
                   );
                 })
               }
+              {
+                props.preview &&
+                <Box w={imageSize} p={1}>
+                  <Flex align="center" style={{ height: '100%' }}>
+                    <Link to={`/gallery/${gallery.id}`} style={{ width: '100%' }}>
+                      <div style={{
+                        width: '100%',
+                        height: 90,
+                        fontSize: '3em',
+                        display: 'flex',
+                        background: '#EEE',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'normal',
+                        color: '#888',
+                      }}>+</div>
+                    </Link>
+                  </Flex>
+                </Box>
+              }
             </Flex>
           </Paper>
         </Box>
-        <PostTextView
-          refresh={props.refresh}
-          post={props.post}
-          w={size}
-          canPin={props.canPin}
-          preview={props.preview}
-          modify={props.modify} />
+        {props.textView(size)}
       </Post>
     );
-  };
-};
+  }
+}
 
 export default GalleryPost;

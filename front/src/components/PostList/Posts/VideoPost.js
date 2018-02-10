@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import { Box } from 'grid-styled';
-import { Post, PostTextView } from 'components/PostList';
+import { Post } from 'components/PostList';
 
 import { Video, Paper } from 'components/common';
 
@@ -17,16 +17,10 @@ class VideoPost extends Component {
             <Video url={props.post.media.url} />
           </Paper>
         </Box>
-        <PostTextView
-          refresh={props.refresh}
-          post={props.post}
-          w={size}
-          canPin={props.canPin}
-          preview={props.preview}
-          modify={props.modify} />
+        {props.textView(size)}
       </Post>
     );
-  };
-};
+  }
+}
 
 export default VideoPost;

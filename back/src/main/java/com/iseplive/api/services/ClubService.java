@@ -1,6 +1,8 @@
 package com.iseplive.api.services;
 
+import com.iseplive.api.conf.jwt.TokenPayload;
 import com.iseplive.api.constants.ClubRoles;
+import com.iseplive.api.constants.Roles;
 import com.iseplive.api.dao.club.ClubFactory;
 import com.iseplive.api.dao.club.ClubMemberRepository;
 import com.iseplive.api.dao.club.ClubRepository;
@@ -12,6 +14,7 @@ import com.iseplive.api.entity.club.Club;
 import com.iseplive.api.entity.club.ClubMember;
 import com.iseplive.api.entity.club.ClubRole;
 import com.iseplive.api.entity.user.Student;
+import com.iseplive.api.exceptions.AuthException;
 import com.iseplive.api.exceptions.IllegalArgumentException;
 import com.iseplive.api.utils.MediaUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,6 +97,12 @@ public class ClubService {
   }
 
   public ClubMember addMember(Long clubId, Long studentId) {
+    clubMemberRepository.findByClubId(clubId).forEach(club -> {
+      if (club.getMember().getId().equals(studentId)) {
+        throw new IllegalArgumentException("this student is already part of this club");
+      }
+    });
+
     ClubMember clubMember = new ClubMember();
     clubMember.setClub(getClub(clubId));
     clubMember.setMember(studentService.getStudent(studentId));
@@ -134,9 +143,11 @@ public class ClubService {
     return clubMemberRepository.findByClubId(id);
   }
 
-  public ClubRole createRole(String role) {
+  public ClubRole createRole(String role, Long clubId) {
+    Club club = getClub(clubId);
     ClubRole clubRole = new ClubRole();
     clubRole.setName(role);
+    clubRole.setClub(club);
     return clubRoleRepository.save(clubRole);
   }
 
@@ -177,8 +188,13 @@ public class ClubService {
     return clubRepository.save(club);
   }
 
-  public ClubMember updateMemberRole(Long member, Long role) {
+  public ClubMember updateMemberRole(Long member, Long role, TokenPayload payload) {
     ClubMember clubMember = getMember(member);
+    if (!payload.getRoles().contains(Roles.ADMIN) && payload.getRoles().contains(Roles.CLUB_MANAGER)) {
+      if (!payload.getClubsAdmin().contains(clubMember.getClub().getId())) {
+        throw new AuthException("no rights to modify this club");
+      }
+    }
     clubMember.setRole(getClubRole(role));
     return clubMemberRepository.save(clubMember);
   }
@@ -191,9 +207,14 @@ public class ClubService {
     return clubMember;
   }
 
-  public void removeMember(Long member) {
+  public void removeMember(Long member, TokenPayload payload) {
     ClubMember clubMember = getMember(member);
     Club club = clubMember.getClub();
+    if (!payload.getRoles().contains(Roles.ADMIN) && payload.getRoles().contains(Roles.CLUB_MANAGER)) {
+      if (!payload.getClubsAdmin().contains(club.getId())) {
+        throw new AuthException("no rights to modify this club");
+      }
+    }
     club.getAdmins().remove(clubMember.getMember());
     club.getMembers().remove(clubMember);
     clubRepository.save(club);
@@ -212,5 +233,16 @@ public class ClubService {
 
   public Club getIsepLive() {
     return clubRepository.findByIsAdmin(true);
+  }
+
+  public List<ClubRole> getClubRoles(Long id) {
+    return clubRoleRepository.findByClub_Id(id);
+  }
+
+  public void deleteClubRole(Long clubid, Long roleid) {
+    ClubRole role = clubRoleRepository.findOne(roleid);
+    if (role != null) {
+      clubRoleRepository.delete(role);
+    }
   }
 }

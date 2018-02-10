@@ -3,14 +3,12 @@
 import React, { Component } from 'react';
 import Button from 'material-ui/Button';
 
-
 import Dialog, {
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
 } from 'material-ui/Dialog';
-
 
 class Popup extends Component {
 
@@ -26,17 +24,17 @@ class Popup extends Component {
 
   discard = () => {
     this.props.onRespond(false);
-    this.setState({ open: false })
+    this.setState({ open: false });
   }
 
   agree = () => {
     this.props.onRespond(true);
-    this.setState({ open: false })
+    this.setState({ open: false });
   }
 
   render() {
     return (
-      <Dialog open={this.state.open} onRequestClose={this.discard}>
+      <Dialog open={this.state.open} onClose={this.discard}>
         <DialogTitle>{this.props.title || 'Titre'}</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -53,7 +51,7 @@ class Popup extends Component {
         </DialogActions>
       </Dialog>
     );
-  };
-};
+  }
+}
 
 export default Popup;

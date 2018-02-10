@@ -21,7 +21,6 @@ import {
 import Auth from '../../components/Auth/AuthComponent';
 import { ADMIN, EVENT_MANAGER } from '../../constants';
 
-
 export default class Event extends React.Component {
 
   state = {
@@ -47,6 +46,13 @@ export default class Event extends React.Component {
     this.setState({ openMenu: true, anchorEl: e.currentTarget });
   }
 
+  renderDescription(desc: string) {
+    const description = desc.length > 300 ? desc.substr(0, 300) + '...' : desc;
+    return description.split('\n').map(d => {
+      return <Text color="#555">{d}</Text>;
+    });
+  }
+
   render() {
     const { event } = this.props;
     return (
@@ -68,16 +74,16 @@ export default class Event extends React.Component {
                 <Author data={event.club} />
               </Box>
             </Flex>
-            <Text>{event.description}</Text>
+            {this.renderDescription(event.description)}
             <Auth roles={[ADMIN, EVENT_MANAGER]}>
-              <IconButton color="accent" onClick={this.handleMenu}>
+              <IconButton color="secondary" onClick={this.handleMenu}>
                 <MoreIcon />
               </IconButton>
             </Auth>
             <Menu
               anchorEl={this.state.anchorEl}
               open={this.state.openMenu}
-              onRequestClose={this.closeMenu}>
+              onClose={this.closeMenu}>
               <MenuItem onClick={this.editEvent}>Modifier</MenuItem>
               <MenuItem onClick={this.deleteEvent}>Supprimer</MenuItem>
             </Menu>
@@ -86,4 +92,4 @@ export default class Event extends React.Component {
       </Paper>
     );
   }
-};
+}

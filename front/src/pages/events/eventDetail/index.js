@@ -3,12 +3,10 @@
 import React, { Component } from 'react';
 
 import {
-  Filler,
   FluidContent,
   ScrollToTopOnMount,
   BgImage,
   Title,
-  Subtitle,
   Text
 } from 'components/common';
 import Loader from 'components/Loader';
@@ -18,6 +16,7 @@ import Author from 'components/Author';
 import { Flex, Box } from 'grid-styled';
 
 import * as eventData from 'data/event';
+import * as utils from '../../../data/util';
 
 class EventDetail extends Component {
   state = {
@@ -30,7 +29,7 @@ class EventDetail extends Component {
     eventData.getEvent(this.props.match.params.id).then(res => {
       this.setState({ event: res.data, isLoading: false });
     });
-  };
+  }
 
   render() {
     const { event } = this.state;
@@ -46,23 +45,32 @@ class EventDetail extends Component {
                 <Flex>
                   <Box mb={2}>
                     <Title invert>{event.title}</Title>
-                    <Subtitle><i>{event.location}</i> - <Time date={event.date} format="DD/MM/YYYY HH:mm" /></Subtitle>
+                    <div>
+                      <Title fontSize={1}>Le <Time date={event.date} format="DD/MM/YYYY [à] HH[h]mm" /></Title>
+                      <Text fs="1.1em" mb={.5}>{event.location}</Text>
+                    </div>
                   </Box>
                   <Box ml="auto">
                     <Author data={event.club} />
                   </Box>
                 </Flex>
-                <Text>
-                  {event.description}
-                </Text>
-                <Filler h={300} />
+                <Box mt="10px" style={{ minHeight: 300 }}>
+                  {
+                    event.description
+                      .split('\n')
+                      .map((par, i) => <Text
+                        key={i}
+                        color="#555"
+                        mb={1}>{utils.parseText(par)}</Text>)
+                  }
+                </Box>
               </FluidContent>
             </div>
           }
         </Loader>
       </div>
     );
-  };
-};
+  }
+}
 
 export default EventDetail;

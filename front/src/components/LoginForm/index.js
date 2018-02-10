@@ -11,7 +11,7 @@ import Loader from '../Loader';
 
 export default function LoginForm(props) {
   return (
-    <Dialog open={props.open} transition={Slide} onRequestClose={props.handleRequestClose}>
+    <Dialog open={props.open} transition={Slide} onClose={props.handleRequestClose}>
       <DialogTitle style={{
         textAlign: 'center'
       }}>
@@ -28,11 +28,12 @@ export default function LoginForm(props) {
               label="Nom d'utilisateur"
               margin="normal"
               fullWidth
+              type="text"
               onChange={(e) => props.onChange('username', e)} />
             <TextField
+              type="password"
               error={props.error}
               helperText={props.error && 'Mauvais mot de passe ou utilisateur'}
-              type="password"
               margin="normal"
               label="Mot de passe"
               fullWidth
@@ -43,11 +44,11 @@ export default function LoginForm(props) {
           {/* <Button onClick={props.handleRequestClose} color="primary">
             Mot de passe oublié
         </Button> */}
-          <Button type="submit" color="accent" disabled={props.loading}>
+          <Button type="submit" color="secondary" disabled={props.loginDisabled}>
             Connexion
         </Button>
         </DialogActions>
       </form>
     </Dialog>
   );
-};
+}

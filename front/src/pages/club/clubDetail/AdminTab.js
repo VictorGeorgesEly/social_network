@@ -19,11 +19,14 @@ import IconButton from 'material-ui/IconButton';
 import Delete from 'material-ui-icons/Delete';
 import Done from 'material-ui-icons/Done';
 import VerifiedUser from 'material-ui-icons/VerifiedUser';
+import DeleteIcon from 'material-ui-icons/Delete';
+
 import Checkbox from 'material-ui/Checkbox';
 
 import {
   FormControlLabel,
 } from 'material-ui/Form';
+import TextField from 'material-ui/TextField';
 
 import { MenuItem } from 'material-ui/Menu';
 import Select from 'material-ui/Select';
@@ -39,78 +42,133 @@ import * as userData from '../../../data/users/student';
 import { backUrl } from '../../../config';
 import { ADMIN, CLUB_MANAGER } from '../../../constants';
 
-function RightsPanel(props) {
-  const {
-    selection,
-    handleSelectRole,
-    isMemberAdmin,
-    setAdmin,
-    userid,
-    getRole,
-    deleteMember,
-  } = props;
-  return (
-    <div>
-      <Title invert>Droits</Title>
-      {!selection && <Text>Sélectionnez un membre</Text>}
-      {
-        selection &&
-        <div>
-          <Text>{selection.member.firstname} {selection.member.lastname}</Text>
+const defaultRoles = [
+  { id: 1, name: 'Président' },
+  { id: 2, name: 'Trésorier' },
+  { id: 3, name: 'Membre' },
+];
 
-          <Box mt={3}>
-            <FormControl style={{ width: '100%' }}>
-              <InputLabel htmlFor="role">Role</InputLabel>
-              <Select
-                fullWidth
-                value={getRole(selection)}
-                onChange={handleSelectRole}
-                input={<Input fullWidth id="role" />}
-              >
-                <MenuItem value={1}>Président</MenuItem>
-                <MenuItem value={2}>Membre</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <FormControlLabel
-            control={
-              <Checkbox
-                disabled={
-                  selection.member.id === userid &&
-                  !authData.hasRole([ADMIN, CLUB_MANAGER])
-                }
-                checked={isMemberAdmin(selection.member.id)}
-                onChange={setAdmin} />
-            }
-            label="Admin"
-          />
 
+class RightsPanel extends React.Component {
+  state = {
+    roles: [],
+  }
+
+  componentDidMount() {
+    clubData.getClubRoles(this.props.clubid).then(res => {
+      this.setState({ roles: res.data });
+    });
+  }
+
+  render() {
+    const {
+      selection,
+      handleSelectRole,
+      isMemberAdmin,
+      setAdmin,
+      userid,
+      getRole,
+      deleteMember,
+    } = this.props;
+    const roles = [...defaultRoles, ...this.state.roles];
+    return (
+      <div>
+        <Title invert>Droits</Title>
+        {!selection && <Text>Sélectionnez un membre</Text>}
+        {
+          selection &&
           <div>
-            <IconButton onClick={deleteMember}>
-              <Delete />
-            </IconButton>
+            <Text>{selection.member.firstname} {selection.member.lastname}</Text>
+
+            <Box mt={3}>
+              <FormControl style={{ width: '100%' }}>
+                <InputLabel htmlFor="role">Role</InputLabel>
+                <Select
+                  fullWidth
+                  value={getRole(selection)}
+                  onChange={handleSelectRole}
+                  input={<Input fullWidth id="role" />}
+                >
+                  {
+                    roles.map(ro => {
+                      return <MenuItem key={ro.id} value={ro.id}>{ro.name}</MenuItem>;
+                    })
+                  }
+                </Select>
+              </FormControl>
+            </Box>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  disabled={
+                    selection.member.id === userid &&
+                    !authData.hasRole([ADMIN, CLUB_MANAGER])
+                  }
+                  checked={isMemberAdmin(selection.member.id)}
+                  onChange={setAdmin} />
+              }
+              label="Admin"
+            />
+
+            <div>
+              <IconButton onClick={deleteMember}>
+                <Delete />
+              </IconButton>
+            </div>
           </div>
-        </div>
-      }
-    </div>
-  )
+        }
+      </div>
+    );
+  }
 }
 
 class AddUserPanel extends React.Component {
   state = {
+    selected: false,
     selectedUser: 0,
+    selectValue: '',
   }
 
-  selectUser = (user) => {
-    this.setState({ selectedUser: user.id });
+  selectUser = (user, fullName) => {
+    this.setState({
+      selectedUser: user.id,
+      selectValue: fullName,
+      selected: true,
+    });
   }
 
   searchUser = (search) => {
+    this.setState({ selectValue: search });
+    if (search.length === 0) {
+      this.setState({ selected: false });
+      return Promise.resolve([]);
+    }
     return userData.searchStudents(search, [], 'a', 0).then(res => {
       return res.data.content
         .filter(user => this.props.members
-          .filter(m => m.member.id === user.id).length === 0)
+          .filter(m => m.member.id === user.id).length === 0);
     });
+  }
+
+  addUser = () => {
+    this.setState({ selectValue: '', selected: false });
+    this.props.addMember(this.state.selectedUser);
+  }
+
+  renderSuggestion = (e) => {
+    const name = `${e.firstname} ${e.lastname}`;
+    const url = e.photoUrlThumb ?
+      backUrl + e.photoUrlThumb : '/img/svg/user.svg';
+    return (
+      <div style={{ display: 'inherit', alignItems: 'inherit' }} >
+        <Avatar
+          alt={name}
+          src={url}
+          style={{ marginRight: 10 }}
+        />
+        <span>{name}</span>
+      </div>
+    );
   }
 
   render() {
@@ -119,16 +177,109 @@ class AddUserPanel extends React.Component {
         <Title invert>Ajouter membre</Title>
         <Autocomplete
           label="Etudiant"
+          value={this.state.selectValue}
           onSelect={this.selectUser}
           search={this.searchUser}
-          renderSuggestion={(e) => `${e.firstname} ${e.lastname}`} />
+          renderSuggestion={this.renderSuggestion} />
         <Box mt={1}>
-          <Button color="accent" onClick={this.props.addMember(this.state)}>
+          <Button color="secondary" onClick={this.addUser} disabled={!this.state.selected}>
             Ajouter
           </Button>
         </Box>
       </div>
-    )
+    );
+  }
+}
+
+export class AddRolePanel extends React.Component {
+
+  state = {
+    name: '',
+    roles: [],
+    openDeletePopup: false,
+    roleToDelete: null,
+  }
+
+  componentDidMount() {
+    this.loadClubRoles();
+  }
+
+  loadClubRoles() {
+    clubData.getClubRoles(this.props.clubid).then(res => {
+      this.setState({ roles: res.data });
+    });
+  }
+
+  disabled() {
+    const { name } = this.state;
+    return name === '';
+  }
+
+  onRoleChange = (event) => {
+    this.setState({ name: event.target.value });
+  }
+
+  addRole = () => {
+    clubData.addRoleName(this.props.clubid, this.state.name).then(res => {
+      this.loadClubRoles();
+      this.setState({ name: '' });
+    });
+  }
+
+  deleteAccepted = (ok) => {
+    if (ok) {
+      const { roleToDelete } = this.state;
+      clubData.deleteClubRole(this.props.clubid, roleToDelete.id).then(res => {
+        this.loadClubRoles();
+      });
+    }
+    this.setState({ openDeletePopup: false });
+  }
+
+  render() {
+    const { name } = this.state;
+    return (
+      <div>
+        <Title invert>Rôles</Title>
+        {
+          this.state.roles.map(r => {
+            return (
+              <Flex align="center" key={r.id}>
+                <Box>
+                  <Text>{r.name}</Text>
+                </Box>
+                <Box ml="auto">
+                  <Button mini fab color="primary" onClick={() =>
+                    this.setState({
+                      roleToDelete: r,
+                      openDeletePopup: true,
+                    })}>
+                    <DeleteIcon />
+                  </Button>
+                </Box>
+              </Flex>
+            );
+          })
+        }
+        <TextField
+          margin="normal"
+          fullWidth
+          value={name}
+          label="Nom du rôle"
+          onChange={this.onRoleChange} />
+        <Box mt="1">
+          <Button color="secondary" disabled={this.disabled()} onClick={this.addRole}>
+            Ajouter
+          </Button>
+        </Box>
+        <Popup
+          title="Suppression"
+          description="ATTENTION! Supprimer ce rôle entrainera la suppression de tout les membres portant ce rôle dans l'association."
+          open={this.state.openDeletePopup}
+          onRespond={this.deleteAccepted}
+        />
+      </div>
+    );
   }
 }
 
@@ -137,31 +288,31 @@ export default class MembersTab extends React.Component {
     members: [],
     admins: [],
     selection: null,
-    addUser: false,
+    mode: '',
     openDeletePopup: false,
   }
 
   componentDidMount() {
     this.userid = authData.getUser().id;
-    this.loadMembers()
+    this.loadMembers();
   }
 
   loadMembers() {
     clubData.getMembers(this.props.clubid).then(res => {
-      this.setState({ members: res.data })
-    })
+      this.setState({ members: res.data });
+    });
     clubData.getAdmins(this.props.clubid).then(res => {
-      this.setState({ admins: res.data })
-    })
+      this.setState({ admins: res.data });
+    });
   }
 
   selectMember = member => e => {
-    this.setState({ selection: member, addUser: false });
+    this.setState({ selection: member, mode: '' });
   }
 
   isMemberAdmin = (memberid: number) => {
     return this.state.admins
-      .filter(m => m.id === memberid).length > 0
+      .filter(m => m.id === memberid).length > 0;
   }
 
   getRole = (selection) => {
@@ -175,7 +326,7 @@ export default class MembersTab extends React.Component {
   handleSelectRole = event => {
     clubData.updateMemberRole(this.state.selection.id, event.target.value).then(res => {
       this.loadMembers();
-    })
+    });
   }
 
   setAdmin = () => {
@@ -184,20 +335,20 @@ export default class MembersTab extends React.Component {
       if (this.isMemberAdmin(selection.member.id)) {
         clubData.removeAdmin(this.props.clubid, selection.member.id).then(res => {
           this.loadMembers();
-        })
+        });
       } else {
         clubData.addAdmin(this.props.clubid, selection.member.id).then(res => {
           this.loadMembers();
-        })
+        });
       }
     }
   }
 
-  addMember = (data) => e => {
-    clubData.addMember(this.props.clubid, data.selectedUser).then(res => {
+  addMember = (selectedUser) => {
+    clubData.addMember(this.props.clubid, selectedUser).then(res => {
       this.loadMembers();
-      this.setState({ addUser: false });
-    })
+      this.setState({ mode: 'addUser' });
+    });
   }
 
   deleteMember = () => {
@@ -209,7 +360,7 @@ export default class MembersTab extends React.Component {
       clubData.deleteMember(this.state.selection.id).then(res => {
         this.loadMembers();
         this.setState({ selection: null });
-      })
+      });
     }
     this.setState({ openDeletePopup: false });
   }
@@ -218,19 +369,28 @@ export default class MembersTab extends React.Component {
     const {
       members,
       selection,
-      addUser,
+      mode,
       openDeletePopup,
     } = this.state;
     return (
       <div>
-        <Button color="accent" onClick={() => this.setState({ addUser: true })}>
-          Ajouter un membre
+        <Button color="secondary" onClick={() => this.setState({
+          mode: 'addUser',
+          selection: null
+        })}>
+          Ajouter membre
         </Button>
-        <Flex wrap>
+        <Button color="secondary" onClick={() => this.setState({
+          mode: 'addRole',
+          selection: null
+        })}>
+          Rôles
+        </Button>
+        <Flex wrap style={{ minHeight: 400 }}>
           <Box w={[1, 1 / 3]} p={2}>
             <Paper p="2em">
               {
-                !addUser &&
+                mode === '' &&
                 <RightsPanel
                   selection={selection}
                   isMemberAdmin={this.isMemberAdmin}
@@ -238,13 +398,18 @@ export default class MembersTab extends React.Component {
                   handleSelectRole={this.handleSelectRole}
                   userid={this.userid}
                   getRole={this.getRole}
+                  clubid={this.props.clubid}
                   deleteMember={this.deleteMember} />
               }
               {
-                addUser &&
+                mode === 'addUser' &&
                 <AddUserPanel
                   members={members}
                   addMember={this.addMember} />
+              }
+              {
+                mode === 'addRole' &&
+                <AddRolePanel clubid={this.props.clubid} />
               }
             </Paper>
           </Box>
@@ -253,7 +418,7 @@ export default class MembersTab extends React.Component {
               <List>
                 {
                   members.map(user => (
-                    <ListItem key={user.id} dense button onClick={this.selectMember(user)}>
+                    <ListItem key={user.id} size="small" button onClick={this.selectMember(user)}>
                       <Avatar alt="photo" src={user.member.photoUrlThumb ? backUrl + user.member.photoUrlThumb : '/img/svg/user.svg'} />
                       <ListItemText primary={`${user.member.firstname} ${user.member.lastname}`} />
                       {this.isMemberAdmin(user.member.id) && <VerifiedUser style={{ color: '#999', marginRight: 10 }} />}
@@ -280,4 +445,4 @@ export default class MembersTab extends React.Component {
       </div>
     );
   }
-};
+}

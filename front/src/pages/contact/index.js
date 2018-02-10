@@ -51,12 +51,12 @@ class Contact extends Component {
           />
           <p>Adresse</p>
           <p>Mail</p>
-          <Button raised color="accent">Envoyer</Button>
+          <Button raised color="secondary">Envoyer</Button>
           {/* TODO Mettre google maps ici ou avant le formulaire*/}
         </FluidContent>
       </div>
     );
-  };
-};
+  }
+}
 
 export default Contact;

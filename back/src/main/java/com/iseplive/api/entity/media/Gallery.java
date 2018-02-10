@@ -1,10 +1,13 @@
 package com.iseplive.api.entity.media;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iseplive.api.constants.MediaType;
 
+import javax.persistence.CascadeType;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -18,14 +21,15 @@ public class Gallery extends Media {
 
   private String name;
 
-  @OneToMany
-  private List<Image> images;
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "gallery")
+  private List<Image> images = new ArrayList<>();
 
   @Override
   public void setCreation(Date creation) {
     super.setCreation(creation);
   }
 
+  @JsonIgnore
   public List<Image> getImages() {
     return images;
   }
@@ -38,11 +42,15 @@ public class Gallery extends Media {
     return name;
   }
 
-  public Image getCoverImage() {
-    return images.get(0);
-  }
-
   public void setName(String name) {
     this.name = name;
+  }
+
+  public Image getCoverImage() {
+    return images.size() > 0 ? images.get(0) : null;
+  }
+
+  public List<Image> getPreviewImages() {
+    return images.subList(0, images.size() < 10 ? images.size() : 10);
   }
 }

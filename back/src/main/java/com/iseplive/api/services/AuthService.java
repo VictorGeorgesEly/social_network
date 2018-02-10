@@ -15,6 +15,20 @@ public class AuthService {
   @Autowired
   StudentService studentService;
 
+
+  /**
+   * Check if user has one of the roles listed
+   * @return
+   */
+  public boolean hasRoles(TokenPayload payload, String... roles) {
+    for (String r: roles) {
+      if (payload.getRoles().contains(r)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public boolean isUserAnonymous() {
     // by default spring security set the principal as "anonymousUser"
     return SecurityContextHolder.getContext().getAuthentication()
@@ -34,5 +48,9 @@ public class AuthService {
       return studentService.getStudent(id);
     }
     return null;
+  }
+
+  public boolean userHasRole(TokenPayload auth, String role) {
+    return auth.getRoles().contains(role);
   }
 }

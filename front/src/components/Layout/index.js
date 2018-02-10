@@ -2,10 +2,15 @@
 
 import React from 'react';
 
-import { NavLink, Redirect, Route, Switch, withRouter } from 'react-router-dom';
+import {
+  Link,
+  NavLink,
+  Redirect,
+  Route,
+  Switch,
+} from 'react-router-dom';
 import styled from 'styled-components';
 
-import axios from 'axios';
 
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
@@ -14,6 +19,7 @@ import Menu, { MenuItem } from 'material-ui/Menu';
 
 import IconButton from 'material-ui/IconButton';
 import LockOpen from 'material-ui-icons/LockOpen';
+import MenuIcon from 'material-ui-icons/Menu';
 
 import Drawer from 'material-ui/Drawer';
 import { ListItem, ListItemText } from 'material-ui/List';
@@ -28,7 +34,6 @@ import Casino from 'material-ui-icons/Casino';
 import Event from 'material-ui-icons/Event';
 import HelpIcon from 'material-ui-icons/Help';
 
-
 import Home from 'pages/home';
 import PostDetail from 'pages/home/PostDetail';
 import Media from 'pages/media';
@@ -42,10 +47,10 @@ import CalendarEvents from 'pages/events/calendar';
 import NotFound from 'pages/404';
 import Resume from 'pages/resume';
 import Whoarewe from 'pages/whoAreWe';
-import Contact from 'pages/contact';
-import Help from 'pages/help';
+// import Contact from 'pages/contact';
+// import Help from 'pages/help';
 import LegalNotice from 'pages/legalNotice';
-import UserAgreement from 'pages/userAgreement';
+// import UserAgreement from 'pages/userAgreement';
 import Admin from 'pages/administration';
 import Gallery from 'pages/gallery';
 
@@ -61,18 +66,17 @@ import * as roles from '../../constants';
 
 import { sendAlert } from '../../components/Alert';
 
-import Profile from './profile';
+import Profile from './Profile';
 import LoginForm from '../LoginForm';
 
+import Interceptor from './Intercept';
 
 const WIDTH_THRESHOLD = 1080;
 
 const Logo = styled.img`
   height: 50px;
   margin-right: 20px;
-  cursor: pointer;
 `;
-
 
 const NavMenu = styled.div`
   flex: 1 1 auto;
@@ -95,21 +99,26 @@ const NavMenu = styled.div`
     border-left: 2px solid white;
   }
 
-  @media (max-width: ${props => WIDTH_THRESHOLD + 'px'}) {
+  @media (max-width: ${props => WIDTH_THRESHOLD}px) {
     display: none;
   }
 `;
-
-
 
 const Root = styled.div`
   width: 100%;
 `;
 
+const Responsive = styled.div`
+  display: none;
+  @media (max-width: ${p => p.maxWidth}px) {
+    display: block;
+  }
+`;
+
 function Nav(props) {
   return (
     <div>
-      <Button color="contrast"
+      <Button
         component={NavLink}
         to={props.to}
         activeStyle={{
@@ -117,7 +126,7 @@ function Nav(props) {
         }}>{props.children}</Button>
     </div>
   );
-};
+}
 
 function SideNav(props) {
   return (
@@ -127,19 +136,18 @@ function SideNav(props) {
       </ListItem>
     </NavLink>
   );
-};
-
+}
 
 const NavItem = (props) => (
   <div style={{
     display: 'flex',
     alignItems: 'center',
   }}>{props.children}</div>
-)
+);
 
 const NavIcon = (props) => (
   <props.icon style={{ color: MAIN_COLOR, marginRight: 10 }} />
-)
+);
 
 const navListMenu = (Component) => (
   <div>
@@ -182,7 +190,6 @@ const navListMenu = (Component) => (
   </div>
 );
 
-
 const navListBar = (Component) => (
   <div>
     <Component to="/accueil">
@@ -204,65 +211,7 @@ const navListBar = (Component) => (
       Qui sommes-nous ?
     </Component>
   </div>
-)
-
-
-class Intercept extends React.Component {
-
-  componentDidMount() {
-    const props = this.props;
-    this.intercept = axios.interceptors.response.use((response) => {
-      // Do something with response data
-      const token = response.headers['authorization'];
-      const refreshToken = response.headers['x-refresh-token'];
-      if (token && refreshToken) {
-        authData.setToken({ token, refreshToken });
-      };
-      return response;
-    }, (error) => {
-      if (!error.response) {
-        sendAlert("Connexion interrompu", 'error');
-      }
-
-      if (error.response) {
-        switch (error.response.status) {
-
-          case 404:
-          case 400:
-            props.history.push('/404');
-            break;
-
-          case 401:
-          case 403:
-            authData.logout();
-            sendAlert("Non autorisé", 'error');
-            props.history.push('/');
-            break;
-          case 503:
-            sendAlert("Serveur indisponible", 'error');
-            break;
-
-          default:
-            break;
-        };
-      };
-
-      // Do something with response error
-      return Promise.reject(error);
-    });
-  }
-
-  componentWillUnmount() {
-    axios.interceptors.response.eject(this.intercept);
-  }
-
-  render() {
-    return null;
-  }
-};
-
-const Interceptor = withRouter(Intercept);
-
+);
 
 class Layout extends React.Component {
   state = {
@@ -281,15 +230,15 @@ class Layout extends React.Component {
   componentDidMount() {
     this.restartWS = true;
     this.setupNotifications();
-  };
+  }
 
   componentWillUnmount() {
     if (this.conn) {
       this.restartWS = false;
       this.conn.close();
       clearTimeout(this.restartTimeout);
-    };
-  };
+    }
+  }
 
   initWebsocket() {
     this.conn = new WebSocket(wsUrl + '/ws/post');
@@ -304,14 +253,16 @@ class Layout extends React.Component {
         const body = authorData.authorType === 'club' ? message.title : message.content;
         const image = authorData.authorType === 'club' ? authorData.logoThumbUrl : authorData.photoUrlThumb;
 
-        Notification.requestPermission(function (status) {
-          new Notification("Nouveau Post !", { body, icon: backUrl + image }); // this also shows the notification
-          const postEvent = new CustomEvent('new-post');
-          document.dispatchEvent(postEvent);
+        Notification.requestPermission().then((status) => {
+          if (status !== 'denied') {
+            new Notification("Nouveau Post !", { body, icon: backUrl + image }); // this also shows the notification
+            const postEvent = new CustomEvent('new-post');
+            document.dispatchEvent(postEvent);
+          }
         });
       } catch (error) {
-        console.log(error)
-      };
+        console.log(error);
+      }
     };
 
     this.conn.onclose = (e) => {
@@ -319,19 +270,20 @@ class Layout extends React.Component {
         this.restartTimeout = setTimeout(() => {
           this.initWebsocket();
         }, 5000);
-      };
+      }
     };
-  };
+  }
 
   setupNotifications = async () => {
+    Notification.requestPermission();
     if (authData.isLoggedIn()) {
       const res = await userData.getLoggedUser();
       if (res.data.allowNotifications) {
         if (window.WebSocket) {
           this.initWebsocket();
-        };
-      };
-    };
+        }
+      }
+    }
   };
 
   handleSideBarClose = () => {
@@ -361,13 +313,26 @@ class Layout extends React.Component {
     const { username, password } = this.state;
     authData.connect(username, password).then(res => {
       this.handleRequestClose();
-      this.props.history.push('/')
+      this.props.history.push('/');
     }).catch(err => {
       if (err.response) {
-        this.setState({ error: true, loading: false });
+        if (err.response.status === 401) {
+          this.setState({ error: true, loading: false });
+        }
+        if (err.response.status === 503) {
+          sendAlert("Serveur indisponible", 'error');
+        }
+      } else {
+        this.setState({ loading: false });
+        sendAlert("Serveur indisponible", 'error');
       }
     });
   };
+
+  isLoginDisabled() {
+    const { loading, username, password } = this.state;
+    return loading || (username === '' || password === '');
+  }
 
   render() {
     return (
@@ -375,15 +340,18 @@ class Layout extends React.Component {
         <Interceptor />
         <AppBar style={{ position: 'relative' }}>
           <Toolbar>
-            <Logo
-              src="/img/layout/iseplive.png"
-              alt="isep-live-logo"
-              onClick={() => {
-                if (window.innerWidth > WIDTH_THRESHOLD) {
-                  this.props.history.push('/');
-                }
+            <Responsive maxWidth={WIDTH_THRESHOLD}>
+              <IconButton color="secondary" onClick={() =>
                 this.setState({ sidebarOpen: true })
-              }} />
+              }>
+                <MenuIcon />
+              </IconButton>
+            </Responsive>
+            <Link to="/">
+              <Logo
+                src="/img/layout/iseplive.png"
+                alt="isep-live-logo" />
+            </Link>
             <NavMenu>
               {navListBar(Nav)}
             </NavMenu>
@@ -393,7 +361,7 @@ class Layout extends React.Component {
                 <Menu id="simple-menu"
                   anchorEl={this.state.anchorEl}
                   open={this.state.open}
-                  onRequestClose={this.handleRequestClose}
+                  onClose={this.handleRequestClose}
                 >
                   {
                     authData.hasRole([roles.ADMIN, roles.USER_MANAGER]) &&
@@ -416,11 +384,11 @@ class Layout extends React.Component {
             <Auth not>
               <IconButton
                 style={{ marginLeft: 10 }}
-                color="contrast"
                 onClick={() => this.setState({ connexionOpen: true })}>
-                <LockOpen />
+                <LockOpen style={{ color: 'white' }} />
               </IconButton>
               <LoginForm
+                loginDisabled={this.isLoginDisabled()}
                 loading={this.state.loading}
                 error={this.state.error}
                 open={this.state.connexionOpen}
@@ -431,16 +399,15 @@ class Layout extends React.Component {
             </Auth>
           </Toolbar>
         </AppBar>
-        {
-          window.innerWidth < WIDTH_THRESHOLD &&
+        <Responsive maxWidth={WIDTH_THRESHOLD}>
           <Drawer
             anchor="left"
             open={this.state.sidebarOpen}
-            onRequestClose={this.handleSideBarClose}
+            onClose={this.handleSideBarClose}
             onClick={this.handleSideBarClose}>
             {navListMenu(SideNav)}
           </Drawer>
-        }
+        </Responsive>
         <Switch>
           <Redirect path="/" exact to="/accueil" />
           <Route path="/accueil" component={Home} />
@@ -456,9 +423,9 @@ class Layout extends React.Component {
           <Route path="/evenements/:id" component={EventDetail} />
           <Route path="/profile" component={Resume} />
           <Route path="/whoarewe" component={Whoarewe} />
-          <Route path="/contact" component={Contact} />
-          <Route path="/aide" component={Help} />
-          <Route path="/convention-utilisation" component={UserAgreement} />
+          <Route path="/contact" component={NotFound} />
+          <Route path="/aide" component={NotFound} />
+          <Route path="/convention-utilisation" component={NotFound} />
           <Route path="/mentions-legales" component={LegalNotice} />
           <AuthenticatedRoute roles={[roles.ADMIN, roles.USER_MANAGER]} path="/administration" component={Admin} />
           <Route path="*" component={NotFound} />
@@ -466,7 +433,7 @@ class Layout extends React.Component {
         <Footer />
       </Root>
     );
-  };
-};
+  }
+}
 
 export default Layout;

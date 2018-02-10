@@ -10,12 +10,10 @@ import Dialog, { DialogActions, DialogContent, DialogTitle } from 'material-ui/D
 import { FileUpload } from '../../components/common';
 import DatePicker from '../../components/DatePicker';
 
-
 const PreviewImage = styled.img`
   max-width: 100%;
   max-height: 300px;
 `;
-
 
 export default class EditEventForm extends React.Component {
   state = {
@@ -30,7 +28,7 @@ export default class EditEventForm extends React.Component {
   componentWillReceiveProps(props) {
     if (props.event) {
       this.setState({ ...props.event });
-    };
+    }
   }
 
   handleFileSelect = (files) => {
@@ -61,7 +59,7 @@ export default class EditEventForm extends React.Component {
 
   render() {
     return (
-      <Dialog open={this.props.open} onRequestClose={this.props.handleRequestClose} >
+      <Dialog open={this.props.open} onClose={this.props.handleRequestClose} >
         <DialogTitle>Editer l'évenement</DialogTitle>
         <DialogContent>
           <Flex wrap>
@@ -96,11 +94,11 @@ export default class EditEventForm extends React.Component {
           <Button onClick={this.props.handleRequestClose} color="primary">
             Annuler
           </Button>
-          <Button color="accent" onClick={this.handleSave}>
+          <Button color="secondary" onClick={this.handleSave}>
             Enregistrer
           </Button>
         </DialogActions>
       </Dialog>
     );
-  };
-};
+  }
+}

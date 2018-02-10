@@ -16,6 +16,8 @@ const Profile = styled.div`
   margin: 5px 0;
   margin-left: 5px;
   max-width: 150px;
+  transition: opacity .3s ease;
+  opacity: ${props => props.loading ? 0 : 1};
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -42,35 +44,37 @@ const Profile = styled.div`
 
 class ProfileMenu extends Component {
   state = {
-    photoUrl: '',
+    photoUrlThumb: '',
     firstname: '',
     lastname: '',
+    loading: true,
   };
 
   componentDidMount() {
     this.getLoggedUserReq = makeCancelable(userData.getLoggedUser());
     this.getLoggedUserReq.promise.then(res => {
-      const { photoUrl, firstname, lastname } = res.data;
-      this.setState({ photoUrl, firstname, lastname });
+      const { photoUrlThumb, firstname, lastname } = res.data;
+      this.setState({ photoUrlThumb, firstname, lastname, loading: false });
     }).catch(err => { });
-  };
+  }
 
   componentWillUnmount() {
     this.getLoggedUserReq.cancel();
   }
 
   render() {
-    const { photoUrl, firstname, lastname } = this.state;
+    const { photoUrlThumb, firstname, lastname, loading } = this.state;
+    if (loading) return null;
     return (
-      <Profile onClick={this.props.onClick}>
-        <ProfileImage src={photoUrl} sz="40px" />
+      <Profile onClick={this.props.onClick} loading={loading}>
+        <ProfileImage src={photoUrlThumb} sz="40px" />
         <div className="infos">
           <span>{firstname}</span>
           <span>{lastname}</span>
         </div>
       </Profile>
     );
-  };
-};
+  }
+}
 
 export default ProfileMenu;

@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { Flex } from 'grid-styled';
 
 import Checkbox from 'material-ui/Checkbox';
+import Auth from '../Auth/AuthComponent';
 
 import NotLiked from 'material-ui-icons/FavoriteBorder';
 import Liked from 'material-ui-icons/Favorite';
@@ -21,6 +22,9 @@ import {
 
 import { backUrl } from '../../config';
 
+import type { Student } from '../../data/users/type';
+import type { AxiosPromise } from 'axios';
+
 const CustomCheckbox = styled(Checkbox) `
   color: ${props => props.theme.accent} !important;
 `;
@@ -35,8 +39,8 @@ const Label = styled.span`
 
 const LikesPanel = props => {
   return (
-    <Dialog open={props.open} onRequestClose={props.onClose}>
-      <DialogTitle>Likes</DialogTitle>
+    <Dialog open={props.open} onClose={props.onClose}>
+      <DialogTitle>{props.students.length} J'aime</DialogTitle>
       {props.students.length === 0 && <Text style={{ width: 200, padding: 20 }}>Aucun like</Text>}
       <List>
         {
@@ -46,7 +50,7 @@ const LikesPanel = props => {
                 <Avatar alt="stud" src={stud.photoUrlThumb ? backUrl + stud.photoUrlThumb : '/img/svg/user.svg'} />
                 <ListItemText primary={stud.firstname + ' ' + stud.lastname} />
               </ListItem>
-            )
+            );
           })
         }
       </List>
@@ -54,7 +58,21 @@ const LikesPanel = props => {
   );
 };
 
-class LikeButton extends Component {
+type LikeButtonProps = {
+  liked: boolean,
+  likes: number,
+  toggleLike: () => mixed,
+  showLikes: () => AxiosPromise<Student[]>
+};
+
+type LikeButtonState = {
+  liked: boolean,
+  likes: number,
+  showLikes: boolean,
+  studentLikes: Student[],
+};
+
+class LikeButton extends Component<LikeButtonProps, LikeButtonState> {
   state = {
     liked: this.props.liked,
     likes: this.props.likes,
@@ -69,37 +87,41 @@ class LikeButton extends Component {
         likes: this.state.likes + (this.state.liked ? -1 : 1)
       });
       this.props.toggleLike();
-      // postData.toggleLikePost(this.props.post.id);
-    };
+    }
   };
 
   showLikes = () => {
     this.props.showLikes().then(res => {
       this.setState({ showLikes: true, studentsLike: res.data });
-    })
+    });
   };
 
   onHideLikes = () => {
-    this.setState({ showLikes: false })
+    this.setState({ showLikes: false });
   }
 
   render() {
     const { showLikes, studentsLike } = this.state;
     return (
       <Flex align="center">
-        <Label onClick={this.showLikes}>{this.state.likes} j'aime</Label>
-        <CustomCheckbox
-          icon={<NotLiked />}
-          checkedIcon={<Liked />}
-          checked={this.state.liked}
-          onChange={this.handleLike} />
+        <Label onClick={this.showLikes} style={{
+          width: 70,
+          textAlign: 'right',
+        }}>{this.state.likes} j'aime</Label>
+        <Auth logged>
+          <CustomCheckbox
+            icon={<NotLiked />}
+            checkedIcon={<Liked />}
+            checked={this.state.liked}
+            onChange={this.handleLike} />
+        </Auth>
         <LikesPanel
           open={showLikes}
           onClose={this.onHideLikes}
           students={studentsLike} />
       </Flex>
     );
-  };
-};
+  }
+}
 
 export default LikeButton;
